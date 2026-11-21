@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Corgi Chomp</title>
+<meta name="description" content="Help Biscuit the corgi eat snacks smaller than she is, grow huge, and avoid the big ones. A free browser game.">
+<meta name="theme-color" content="#f4945a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Corgi Chomp">
+<meta property="og:title" content="Corgi Chomp">
+<meta property="og:description" content="Eat, grow, and become the Ultimate Corgi.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐶</text></svg>">
 <style>
   :root{
     --ink:#4a2f1b; --cream:#fffaf2; --tan:#d89a5b; --tan-d:#b9783e;
@@ -36,6 +44,13 @@
   .play:hover{filter:brightness(1.05)}
   .play:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
   .small{font-size:13px;opacity:.8}
+  @media (max-width:520px){
+    .hud-left{top:8px;left:8px;min-width:0;width:calc(100% - 172px);padding:6px 10px;border-radius:12px}
+    .score{font-size:20px} .lvl{font-size:11px}
+    .hud-right{top:8px;right:8px;gap:5px}
+    .lives{font-size:14px;padding:4px 7px;min-height:38px;border-radius:12px}
+    .btn-s{width:38px;height:38px;font-size:16px;border-radius:12px}
+  }
   #banner{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%);font-size:clamp(28px,6vw,48px);font-weight:900;color:#fff;text-shadow:3px 3px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);pointer-events:none;opacity:0;white-space:nowrap;text-align:center}
   #banner.show{animation:pop 2.2s ease-out forwards}
   #banner small{display:block;font-size:.45em}
@@ -63,12 +78,13 @@
   <div class="card">
     <h1>Corgi Chomp</h1>
     <p>Biscuit the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
-    <div class="foods">🧈🍰🍞🐁🐟🍖🍌🍟🧇</div>
+    <div class="foods">🧈🍰🎂🍞🐁🐟🧇<img id="yogurtIcon" alt="yogurt" style="width:1.15em;height:1.15em;vertical-align:-0.2em">🥕🍎</div>
     <div class="rules">
       🐾 Move with the <b>mouse / finger</b>, or <b>WASD / arrow keys</b><br>
-      🟢 <b class="g">Green ring</b> = smaller than Biscuit, so eat it and grow!<br>
-      🔴 <b class="r">Red ring</b> = too big. Don't touch it or you lose a heart<br>
-      ⭐ Grow big enough and today's scary snacks become tomorrow's lunch
+      🟢 Snacks <b class="g">smaller</b> than Biscuit: eat them and grow!<br>
+      🔴 Snacks <b class="r">bigger</b> than Biscuit: do not touch them, or you lose a heart<br>
+      🔭 As she grows, the camera zooms out <b>two times</b><br>
+      👑 Grow until Biscuit fills <b>half the screen</b> to win
     </div>
     <button class="play" id="playBtn">Play!</button>
     <p class="small" id="bestMenu"></p>
@@ -113,68 +129,108 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------- Food ----------
+const SPR = 256; // sprite resolution (big enough for a half-screen snack)
+function drawYogurt(x) {
+  // a small yogurt pot with a strawberry label, drawn on a 128 grid
+  x.save(); x.scale(SPR / 128, SPR / 128);
+  x.lineJoin = 'round'; x.lineWidth = 4; x.strokeStyle = '#5a3a20';
+  // spoon
+  x.save(); x.translate(84, 30); x.rotate(0.45);
+  x.fillStyle = '#d7dde3'; x.fillRect(-4, -34, 8, 40); x.strokeRect(-4, -34, 8, 40);
+  x.restore();
+  // cup
+  x.beginPath(); x.moveTo(24, 38); x.lineTo(104, 38); x.lineTo(94, 112); x.quadraticCurveTo(64, 120, 34, 112); x.closePath();
+  x.fillStyle = '#fdfbf7'; x.fill(); x.stroke();
+  // label band
+  x.save(); x.clip();
+  x.fillStyle = '#f7a8c0'; x.fillRect(0, 60, 128, 34);
+  x.fillStyle = '#e35d8a'; x.fillRect(0, 60, 128, 5); x.fillRect(0, 89, 128, 5);
+  x.restore();
+  // strawberry on label
+  x.beginPath(); x.moveTo(52, 70); x.quadraticCurveTo(64, 64, 76, 70); x.quadraticCurveTo(74, 86, 64, 92); x.quadraticCurveTo(54, 86, 52, 70);
+  x.fillStyle = '#e53950'; x.fill(); x.lineWidth = 2.5; x.stroke();
+  x.fillStyle = '#4caf50'; x.beginPath(); x.ellipse(64, 67, 9, 4, 0, 0, 7); x.fill();
+  x.fillStyle = '#ffe9a8'; for (const [a, b] of [[59, 76], [68, 75], [64, 83]]) { x.beginPath(); x.arc(a, b, 1.6, 0, 7); x.fill(); }
+  // lid + creamy top
+  x.lineWidth = 4;
+  x.beginPath(); x.ellipse(64, 38, 44, 11, 0, 0, 7); x.fillStyle = '#ffffff'; x.fill(); x.stroke();
+  x.beginPath(); x.ellipse(64, 37, 34, 7, 0, 0, 7); x.fillStyle = '#ffe1ea'; x.fill();
+  x.restore();
+}
 const FOODS = [
   { name: 'Butter', e: '🧈', move: 'drift', col: ['#f7d774', '#fff1a8'], spd: 1 },
   { name: 'Cake',   e: '🍰', move: 'drift', col: ['#f5b7c5', '#fff', '#e35d6a'], spd: 0.9 },
+  { name: 'Birthday cake', e: '🎂', move: 'drift', col: ['#f5b7c5', '#fff', '#8a5a3c', '#ffd23f'], spd: 0.85 },
   { name: 'Bread',  e: '🍞', move: 'drift', col: ['#d9a35f', '#f3d39b'], spd: 1 },
   { name: 'Mouse',  e: '🐁', move: 'scurry', col: ['#b0a8a0', '#f3c1c8'], spd: 1.35, flip: true },
   { name: 'Fish',   e: '🐟', move: 'swim', col: ['#6fb3e0', '#cfe9ff'], spd: 1.2, flip: true },
-  { name: 'Ribs',   e: '🍖', move: 'spin', col: ['#a5502e', '#f3e3c8'], spd: 0.85 },
-  { name: 'Banana', e: '🍌', move: 'spin', col: ['#f5d742', '#fff3a0'], spd: 1.05 },
-  { name: 'Fries',  e: '🍟', move: 'drift', col: ['#f2c94c', '#e03b3b'], spd: 1 },
   { name: 'Waffle', e: '🧇', move: 'spin', col: ['#d9a050', '#f6d08a'], spd: 0.9 },
+  { name: 'Yogurt', draw: drawYogurt, move: 'drift', col: ['#fdfbf7', '#f7a8c0', '#e35d8a'], spd: 1 },
+  { name: 'Carrot', e: '🥕', move: 'spin', col: ['#f28c28', '#ffb366', '#4caf50'], spd: 1.05 },
+  { name: 'Apple',  e: '🍎', move: 'spin', col: ['#e53935', '#fff3e0', '#7cb342'], spd: 1 },
 ];
 for (const f of FOODS) {
-  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const c = document.createElement('canvas'); c.width = c.height = SPR;
   const x = c.getContext('2d');
-  x.font = '100px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
-  x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.fillText(f.e, 64, 70);
+  if (f.draw) f.draw(x);
+  else {
+    x.font = `${SPR * 0.78}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
+    x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(f.e, SPR / 2, SPR * 0.55);
+  }
   f.sprite = c;
 }
+document.getElementById('yogurtIcon').src = FOODS.find(f => f.name === 'Yogurt').sprite.toDataURL();
 
-const LEVELS = [
-  { s: 0,   name: 'Tiny Pup' },
-  { s: 30,  name: 'Puppy' },
-  { s: 41,  name: 'Good Girl' },
-  { s: 56,  name: 'Fluffy Loaf' },
-  { s: 76,  name: 'Chonky Corgi' },
-  { s: 104, name: 'Mega Chonk' },
-  { s: 142, name: 'Bread Loaf Legend' },
-  { s: 194, name: 'Snack Queen' },
-  { s: 265, name: 'Ultimate Corgi' },
-];
-const EAT_RATIO = 0.95;
+// ---------- Growth + camera ----------
+// The camera stays still while Biscuit grows on screen. When she fills
+// ZOOM_FRAC of the screen, the camera zooms out (two times in total).
+// She wins when she fills WIN_FRAC (half) of the screen.
 const START_S = 22;
+const START_FRAC = 0.11, ZOOM_FRAC = 0.28, ZOOM_STEP = 0.4, ZOOM_OUTS = 2, WIN_FRAC = 0.5;
+const ZOOM_S = Array.from({ length: ZOOM_OUTS }, (_, i) => START_S * ZOOM_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, i)));
+const WIN_S = START_S * WIN_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, ZOOM_OUTS));
+const LEVEL_NAMES = [
+  'Tiny Pup', 'Puppy', 'Good Girl', 'Fluffy Loaf', 'Chonky Corgi', 'Mega Chonk',
+  'Bread Loaf Legend', 'Snack Queen', 'Couch Crusher', 'Fridge Raider', 'Bakery Bandit',
+  'Street Sweeper', 'Town Legend', 'Kaiju Corgi', 'Ultimate Corgi',
+];
+const LEVELS = LEVEL_NAMES.map((name, i) => ({ name, s: START_S * Math.pow(WIN_S / START_S, i / (LEVEL_NAMES.length - 1)) }));
+const EAT_RATIO = 0.95;
+const GROW = 0.25;
 
 // ---------- State ----------
 let state = 'menu';
-let player, items, particles, popups, score, lives, level, zoom, targetZoom, spawnT, shake, dyingT, time = 0;
+let player, items, particles, popups, score, lives, level, zstage, won, winT, zoom, targetZoom, spawnT, shake, dyingT, time = 0;
+let bannerQ = [], bannerUntil = 0;
 let best = 0;
 try { best = +localStorage.getItem('corgiChompBest') || 0; } catch (e) {}
 
 function reset() {
   player = { x: 0, y: 0, vx: 0, vy: 0, s: START_S, face: 1, faceAnim: 1, legPh: 0, wag: 0, chomp: 0, invuln: 1.5, blink: 3, dead: false };
   items = []; particles = []; popups = [];
-  score = 0; lives = 3; level = 0; spawnT = 0; shake = 0; dyingT = 0;
+  score = 0; lives = 3; level = 0; zstage = 0; won = false; winT = 0; spawnT = 0; shake = 0; dyingT = 0;
+  bannerQ = []; bannerUntil = 0;
   zoom = targetZoom = computeZoom();
   for (let i = 0; i < 6; i++) spawnItem(true, true);
   updateHud();
 }
 
-function computeZoom() {
-  const screenR = (26 + 18 * Math.min(1, level / 8)) * screenScale;
-  return screenR / player.s;
-}
+// screen fraction per world unit of corgi size (her body is ~3.5 wide, ~2.2 tall)
+function corgiK() { return Math.max(3.5 / W, 2.2 / H); }
+function computeZoom() { return START_FRAC / (START_S * corgiK()) * Math.pow(ZOOM_STEP, zstage); }
 
 // ---------- Spawning ----------
 function spawnItem(forceSmall, anywhere) {
-  const halfW = W / 2 / zoom, halfH = H / 2 / zoom;
+  const z = Math.min(zoom, targetZoom);
+  const halfW = W / 2 / z, halfH = H / 2 / z;
   const type = FOODS[(Math.random() * FOODS.length) | 0];
-  const dangerChance = Math.min(0.45, 0.27 + level * 0.025);
+  const dangerChance = Math.min(0.45, 0.27 + level / (LEVELS.length - 1) * 0.18);
+  // keep big snacks smaller than ~3/4 of the screen
+  const fMax = Math.min(2.78, 0.75 * Math.min(W, H) / (2.3 * z) / player.s);
   let f;
-  if (forceSmall || Math.random() > dangerChance) f = rand(0.3, 0.86);
-  else f = 1.08 + Math.pow(Math.random(), 1.5) * 1.7;
+  if (forceSmall || fMax < 1.2 || Math.random() > dangerChance) f = rand(0.3, 0.86);
+  else f = 1.08 + Math.pow(Math.random(), 1.5) * (fMax - 1.08);
   const r = player.s * f;
   const side = Math.random() < 0.5 ? -1 : 1;
   let x = side * (halfW + r * 1.6);
@@ -186,7 +242,7 @@ function spawnItem(forceSmall, anywhere) {
   const spdScreen = rand(60, 165) * (f > 1 ? 0.7 : 1) * type.spd * screenScale;
   items.push({
     type, x, y, baseY: y, r,
-    vx: -side * spdScreen / zoom * (anywhere ? (Math.random() < 0.5 ? 1 : -1) * side * -1 : 1),
+    vx: -side * spdScreen / z * (anywhere ? (Math.random() < 0.5 ? 1 : -1) * side * -1 : 1),
     vy: 0, t: rand(0, 10), ph: rand(0, 6.28), rot: 0, burst: 1, scurryT: 0
   });
 }
@@ -257,8 +313,10 @@ function gameOver() {
   state = 'over';
   const newBest = score > best;
   if (newBest) { best = score; try { localStorage.setItem('corgiChompBest', best); } catch (e) {} }
-  $('overTitle').textContent = level >= LEVELS.length - 1 ? 'What a legend!' : 'Oh no, Biscuit!';
-  $('overText').textContent = `Biscuit grew into a "${LEVELS[level].name}" before snacking on something way too big.`;
+  $('overTitle').textContent = won ? '👑 You win! 👑' : 'Oh no, Biscuit!';
+  $('overText').textContent = won
+    ? 'Biscuit became the Ultimate Corgi. She now fills half the screen, and nothing is too big for her!'
+    : `Biscuit grew into a "${LEVELS[level].name}" before snacking on something way too big.`;
   $('overScore').textContent = `Score: ${score}`;
   $('overBest').textContent = newBest ? '🏆 New best score!' : `Best: ${best}`;
   $('overOv').classList.add('on');
@@ -266,15 +324,18 @@ function gameOver() {
   $('bestMenu').textContent = `Best score: ${best}`;
   sfx.over();
 }
-function banner(text, sub) {
+function banner(text, sub, now) {
+  if (now) { bannerQ = []; bannerUntil = 0; }
+  if (time < bannerUntil) { bannerQ.push([text, sub]); return; }
+  bannerUntil = time + 1.5;
   const b = $('banner');
   b.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
 }
 function updateHud() {
   $('score').textContent = score;
-  $('lvl').textContent = `Size: ${LEVELS[level].name}`;
-  const cur = level === 0 ? START_S : LEVELS[level].s;
+  $('lvl').textContent = `Size: ${LEVELS[level].name} (${level + 1}/${LEVELS.length})`;
+  const cur = LEVELS[level].s;
   const next = LEVELS[level + 1];
   $('bar').style.width = next ? clamp((player.s - cur) / (next.s - cur) * 100, 0, 100) + '%' : '100%';
   $('lives').textContent = '❤️'.repeat(Math.max(0, lives)) + '🤍'.repeat(Math.max(0, 3 - lives));
@@ -284,7 +345,7 @@ function updateHud() {
 function eat(it) {
   const p = player;
   const gain = Math.max(1, Math.round(10 * (it.r / p.s) * (level + 1)));
-  p.s = Math.sqrt(p.s * p.s + 0.16 * it.r * it.r);
+  p.s = Math.min(WIN_S, Math.sqrt(p.s * p.s + GROW * it.r * it.r));
   score += gain;
   p.chomp = 0.3;
   for (let i = 0; i < 12; i++) {
@@ -295,16 +356,24 @@ function eat(it) {
   const yum = ['Yum!', 'Nom!', 'Chomp!', 'Tasty!', 'Woof!', 'Mmm!'];
   popups.push({ x: it.x, y: it.y - it.r, text: `+${gain}` + (Math.random() < 0.35 ? ' ' + yum[(Math.random() * yum.length) | 0] : ''), life: 1, color: '#fff' });
   sfx.chomp();
-  while (level < LEVELS.length - 1 && p.s >= LEVELS[level + 1].s) {
+  while (level < LEVELS.length - 1 && p.s >= LEVELS[level + 1].s - 1e-6) {
     level++;
     const bonus = lives < 3;
     if (bonus) lives++;
     sfx.level();
-    banner(level === LEVELS.length - 1 ? '👑 ULTIMATE CORGI! 👑' : `⭐ ${LEVELS[level].name}! ⭐`, bonus ? '+1 heart' : 'Bigger snacks are on the menu!');
+    if (level < LEVELS.length - 1) banner(`⭐ ${LEVELS[level].name}! ⭐`, bonus ? '+1 heart' : 'Bigger snacks are on the menu!');
     for (let i = 0; i < 24; i++) {
       const a = rand(0, Math.PI * 2), sp = rand(80, 260) / zoom;
       particles.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.6, 1.2), max: 1.2, size: rand(6, 11) / zoom, color: '#ffd23f', kind: 'star' });
     }
+  }
+  while (zstage < ZOOM_OUTS && p.s >= ZOOM_S[zstage]) {
+    zstage++;
+    banner('🔭 Zoom out! 🔭', zstage < ZOOM_OUTS ? 'Biscuit is getting HUGE' : 'Last zoom! Fill half the screen to win');
+  }
+  if (!won && p.s >= WIN_S) {
+    won = true; winT = 2.6; p.invuln = 99;
+    banner('👑 ULTIMATE CORGI! 👑', 'Biscuit fills half the screen!', true);
   }
   updateHud();
 }
@@ -328,6 +397,7 @@ function hurt(it) {
 
 function update(dt) {
   time += dt;
+  if (bannerQ.length && time >= bannerUntil) banner(...bannerQ.shift());
   const p = player;
   const halfW = W / 2 / zoom, halfH = H / 2 / zoom;
 
@@ -373,7 +443,7 @@ function update(dt) {
 
   // spawning
   spawnT -= dt;
-  const maxItems = 14 + level;
+  const maxItems = Math.min(24, 14 + level);
   if (spawnT <= 0 && items.length < maxItems) {
     const edible = items.filter(i => i.r < p.s * EAT_RATIO).length;
     spawnItem(edible < 4);
@@ -429,6 +499,7 @@ function update(dt) {
   }
 
   if (p.dead && state === 'play') { dyingT -= dt; if (dyingT <= 0) gameOver(); }
+  if (won && state === 'play') { winT -= dt; if (winT <= 0) gameOver(); }
 }
 
 // ---------- Rendering ----------
@@ -463,14 +534,7 @@ function drawBackground(dt) {
 }
 
 function drawItem(it) {
-  const edible = it.r < player.s * EAT_RATIO;
   g.save(); g.translate(it.x, it.y);
-  if (state !== 'menu') {
-    g.beginPath(); g.arc(0, 0, it.r * 1.08, 0, 7);
-    if (edible) { g.strokeStyle = 'rgba(63,174,90,.55)'; g.lineWidth = 2.5 / zoom; }
-    else { g.strokeStyle = `rgba(224,72,72,${0.45 + 0.35 * Math.sin(time * 6 + it.ph)})`; g.lineWidth = 3.5 / zoom; g.fillStyle = 'rgba(224,72,72,.07)'; g.fill(); }
-    g.stroke();
-  }
   g.rotate(it.rot);
   if (it.type.flip && it.vx > 0) g.scale(-1, 1);
   const d = it.r * 2.3;
@@ -485,7 +549,7 @@ function drawCorgi(p) {
   g.save();
   g.translate(p.x, p.y);
   if (p.dead) { g.rotate((1.3 - dyingT) * 3); g.globalAlpha = Math.max(0, dyingT / 1.3); }
-  else if (p.invuln > 0 && state === 'play' && Math.floor(p.invuln * 10) % 2 === 0) g.globalAlpha = 0.45;
+  else if (p.invuln > 0 && !won && state === 'play' && Math.floor(p.invuln * 10) % 2 === 0) g.globalAlpha = 0.45;
   const sq = p.chomp > 0 ? 1 + Math.sin(p.chomp / 0.3 * Math.PI) * 0.06 : 1;
   const breathe = 1 + Math.sin(time * 3) * 0.015;
   g.scale(p.s * p.faceAnim * sq, p.s * breathe / sq);
