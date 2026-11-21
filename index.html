@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Corgi Chomp</title>
-<meta name="description" content="Help Biscuit the corgi eat snacks smaller than she is, grow huge, and avoid the big ones. A free browser game.">
+<meta name="description" content="Help Hrozna the corgi eat snacks smaller than she is, grow huge, and avoid the big ones. A free browser game.">
 <meta name="theme-color" content="#f4945a">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -77,14 +77,14 @@
 <div class="overlay on" id="menu">
   <div class="card">
     <h1>Corgi Chomp</h1>
-    <p>Biscuit the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
+    <p>Hrozna the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
     <div class="foods">🧈🍰🎂🍞🐁🐟🧇<img id="yogurtIcon" alt="yogurt" style="width:1.15em;height:1.15em;vertical-align:-0.2em">🥕🍎</div>
     <div class="rules">
       🐾 Move with the <b>mouse / finger</b>, or <b>WASD / arrow keys</b><br>
-      🟢 Snacks <b class="g">smaller</b> than Biscuit: eat them and grow!<br>
-      🔴 Snacks <b class="r">bigger</b> than Biscuit: do not touch them, or you lose a heart<br>
+      🟢 Snacks <b class="g">smaller</b> than Hrozna: eat them and grow!<br>
+      🔴 Snacks <b class="r">bigger</b> than Hrozna: do not touch them, or you lose a heart<br>
       🔭 As she grows, the camera zooms out <b>two times</b><br>
-      👑 Grow until Biscuit fills <b>half the screen</b> to win
+      👑 Grow until Hrozna fills <b>half the screen</b> to win
     </div>
     <button class="play" id="playBtn">Play!</button>
     <p class="small" id="bestMenu"></p>
@@ -94,14 +94,14 @@
 <div class="overlay" id="pauseOv">
   <div class="card">
     <h2>Paused</h2>
-    <p>Biscuit is waiting patiently. (Not really.)</p>
+    <p>Hrozna is waiting patiently. (Not really.)</p>
     <button class="play" id="resumeBtn">Resume</button>
   </div>
 </div>
 
 <div class="overlay" id="overOv">
   <div class="card">
-    <h2 id="overTitle">Oh no, Biscuit!</h2>
+    <h2 id="overTitle">Oh no, Hrozna!</h2>
     <p id="overText"></p>
     <p style="font-size:28px;font-weight:900" id="overScore"></p>
     <p class="small" id="overBest"></p>
@@ -183,7 +183,7 @@ for (const f of FOODS) {
 document.getElementById('yogurtIcon').src = FOODS.find(f => f.name === 'Yogurt').sprite.toDataURL();
 
 // ---------- Growth + camera ----------
-// The camera stays still while Biscuit grows on screen. When she fills
+// The camera stays still while Hrozna grows on screen. When she fills
 // ZOOM_FRAC of the screen, the camera zooms out (two times in total).
 // She wins when she fills WIN_FRAC (half) of the screen.
 const START_S = 22;
@@ -268,9 +268,41 @@ document.addEventListener('visibilitychange', () => { if (document.hidden && sta
 // ---------- Audio ----------
 let ac = null, muted = false;
 function initAudio() {
-  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} }
+  if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} loadBarks(); }
   if (ac && ac.state === 'suspended') ac.resume();
 }
+// Hrozna's real barks, cut from a recording of her.
+// Web Audio is used when the files can be fetched (http/https);
+// plain <audio> elements are the fallback (for example on file://).
+const BARK_FILES = [1, 2, 3, 4, 5, 6, 7, 8].map(i => `sounds/bark${i}.mp3`);
+let barkBufs = [], barkEls = [], lastBark = -1, barkT = 0;
+function loadBarks() {
+  if (barkBufs.length || barkEls.length) return;
+  barkEls = BARK_FILES.map(src => { const a = new Audio(src); a.preload = 'auto'; return a; });
+  if (!ac || location.protocol === 'file:') return;
+  Promise.all(BARK_FILES.map(src => fetch(src).then(r => { if (!r.ok) throw 0; return r.arrayBuffer(); })
+    .then(b => new Promise((ok, no) => ac.decodeAudioData(b, ok, no)))))
+    .then(bufs => { barkBufs = bufs; }).catch(() => {});
+}
+function playBark(vol = 0.8) {
+  if (muted) return;
+  const n = BARK_FILES.length;
+  let i = (Math.random() * n) | 0;
+  if (i === lastBark) i = (i + 1) % n;
+  lastBark = i;
+  const rate = rand(0.94, 1.06); // small pitch change so it never sounds the same twice
+  if (ac && barkBufs[i]) {
+    const src = ac.createBufferSource(), gn = ac.createGain();
+    src.buffer = barkBufs[i]; src.playbackRate.value = rate; gn.gain.value = vol;
+    src.connect(gn).connect(ac.destination); src.start();
+  } else if (barkEls[i]) {
+    const a = barkEls[i].cloneNode(); a.volume = vol;
+    a.preservesPitch = false; a.playbackRate = rate;
+    a.play().catch(() => {});
+  }
+}
+// time until the next random bark: usually 4-12 s, sometimes a quick "double" bark
+function nextBarkDelay() { return Math.random() < 0.2 ? rand(0.5, 1.2) : rand(4, 12); }
 function tone(freq, dur, type = 'square', vol = 0.06, slideTo) {
   if (!ac || muted) return;
   const t = ac.currentTime, o = ac.createOscillator(), gn = ac.createGain();
@@ -283,7 +315,7 @@ const sfx = {
   chomp() { const b = rand(380, 560); tone(b, 0.07, 'square', 0.05, b * 0.5); setTimeout(() => tone(b * 0.8, 0.06, 'square', 0.04, b * 0.4), 70); },
   hurt() { tone(320, 0.4, 'sawtooth', 0.07, 70); },
   level() { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.16, 'triangle', 0.08), i * 90)); },
-  bark() { tone(480, 0.1, 'sawtooth', 0.05, 260); setTimeout(() => tone(520, 0.12, 'sawtooth', 0.05, 240), 160); },
+  bark() { playBark(); },
   over() { [392, 330, 262, 196].forEach((f, i) => setTimeout(() => tone(f, 0.25, 'triangle', 0.07), i * 160)); },
 };
 function toggleMute() { muted = !muted; document.getElementById('muteBtn').textContent = muted ? '🔇' : '🔊'; }
@@ -304,6 +336,7 @@ function startGame() {
   $('menu').classList.remove('on'); $('overOv').classList.remove('on'); $('pauseOv').classList.remove('on');
   $('hud').classList.add('on');
   sfx.bark();
+  barkT = nextBarkDelay() + 3;
 }
 function togglePause() {
   if (state === 'play') { state = 'paused'; $('pauseOv').classList.add('on'); }
@@ -313,10 +346,10 @@ function gameOver() {
   state = 'over';
   const newBest = score > best;
   if (newBest) { best = score; try { localStorage.setItem('corgiChompBest', best); } catch (e) {} }
-  $('overTitle').textContent = won ? '👑 You win! 👑' : 'Oh no, Biscuit!';
+  $('overTitle').textContent = won ? '👑 You win! 👑' : 'Oh no, Hrozna!';
   $('overText').textContent = won
-    ? 'Biscuit became the Ultimate Corgi. She now fills half the screen, and nothing is too big for her!'
-    : `Biscuit grew into a "${LEVELS[level].name}" before snacking on something way too big.`;
+    ? 'Hrozna became the Ultimate Corgi. She now fills half the screen, and nothing is too big for her!'
+    : `Hrozna grew into a "${LEVELS[level].name}" before snacking on something way too big.`;
   $('overScore').textContent = `Score: ${score}`;
   $('overBest').textContent = newBest ? '🏆 New best score!' : `Best: ${best}`;
   $('overOv').classList.add('on');
@@ -369,11 +402,11 @@ function eat(it) {
   }
   while (zstage < ZOOM_OUTS && p.s >= ZOOM_S[zstage]) {
     zstage++;
-    banner('🔭 Zoom out! 🔭', zstage < ZOOM_OUTS ? 'Biscuit is getting HUGE' : 'Last zoom! Fill half the screen to win');
+    banner('🔭 Zoom out! 🔭', zstage < ZOOM_OUTS ? 'Hrozna is getting HUGE' : 'Last zoom! Fill half the screen to win');
   }
   if (!won && p.s >= WIN_S) {
     won = true; winT = 2.6; p.invuln = 99;
-    banner('👑 ULTIMATE CORGI! 👑', 'Biscuit fills half the screen!', true);
+    banner('👑 ULTIMATE CORGI! 👑', 'Hrozna fills half the screen!', true);
   }
   updateHud();
 }
@@ -398,6 +431,7 @@ function hurt(it) {
 function update(dt) {
   time += dt;
   if (bannerQ.length && time >= bannerUntil) banner(...bannerQ.shift());
+  if (state === 'play' && !player.dead) { barkT -= dt; if (barkT <= 0) { playBark(rand(0.55, 0.9)); barkT = nextBarkDelay(); } }
   const p = player;
   const halfW = W / 2 / zoom, halfH = H / 2 / zoom;
 
