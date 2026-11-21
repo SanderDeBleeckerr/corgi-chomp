@@ -13,8 +13,10 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (b
   - 👆 **Finger:** Hrozna follows your finger
 - Snacks **smaller** than Hrozna: eat them and grow. The game compares the size you see (a mix of visible area and length), so a flat butter and a round apple are judged the same way
 - Snacks **bigger** than Hrozna: touching one costs a heart
-- Hrozna grows through 15 sizes. The camera zooms out two times as she grows
-- **Win:** grow until Hrozna fills half of the screen
+- Every kind of snack has its own fixed size, from small to big: mouse, carrot, apple, yogurt, butter, fish, waffle, bread, cake, birthday cake. Each kind is 1.55x bigger than the one before it
+- Hrozna grows through 20 ranks. The camera zooms out two times as she grows
+- **Top Dog:** when she is bigger than the birthday cake, nothing can hurt her any more
+- **Screen Filler:** she keeps growing until she fills the whole screen. Then every snack gives double points. The game has no end: keep eating for a high score
 - **P / Esc:** pause · **M:** mute
 
 ## Art
