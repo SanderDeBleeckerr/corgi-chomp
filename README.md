@@ -17,6 +17,11 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (b
 - **Win:** grow until Hrozna fills half of the screen
 - **P / Esc:** pause · **M:** mute
 
+## Art
+
+- `sprites/hrozna_walk_1-3.webp`: Hrozna's walk cycle, cut from photos (transparent WebP, 1100 x 648 px, same crop for all frames). 1 size unit = 310 px; the middle of her torso is at pixel (550, 390).
+- `sounds/bark1-8.mp3`: Hrozna's real barks.
+
 ## Run locally
 
 Open `index.html` in any browser. It has no dependencies and no build step.

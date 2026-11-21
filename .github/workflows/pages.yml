@@ -26,7 +26,7 @@ jobs:
         with:
           enablement: true
       - name: Collect site files
-        run: mkdir _site && cp -r index.html sounds _site/ && touch _site/.nojekyll
+        run: mkdir _site && cp -r index.html sounds sprites _site/ && touch _site/.nojekyll
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site

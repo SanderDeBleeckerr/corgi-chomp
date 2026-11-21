@@ -78,6 +78,7 @@
 
 <div class="overlay on" id="menu">
   <div class="card">
+    <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(240px,60%);display:block;margin:-6px auto 0">
     <h1>Corgi Chomp</h1>
     <p>Hrozna the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
     <div class="foods">🧈🍰🎂🍞🐁🐟🧇<img id="yogurtIcon" alt="yogurt" style="width:1.15em;height:1.15em;vertical-align:-0.2em">🥕🍎</div>
@@ -258,7 +259,8 @@ function reset() {
 }
 
 // screen fraction per world unit of corgi size (her body is ~3.5 wide, ~2.2 tall)
-function corgiK() { return Math.max(3.5 / W, 2.2 / H); }
+let CORGI_W = 3.5, CORGI_H = 2.2; // Hrozna's width and height in units of s (measured on load)
+function corgiK() { return Math.max(CORGI_W / W, CORGI_H / H); }
 function computeZoom() { return START_FRAC / (START_S * corgiK()) * Math.pow(ZOOM_STEP, zstage); }
 
 // ---------- Spawning ----------
@@ -642,6 +644,7 @@ function update(dt) {
   p.faceAnim += (p.face - p.faceAnim) * Math.min(1, dt * 12);
   const ratio = Math.min(1, Math.hypot(p.vx, p.vy) / maxSpd);
   p.legPh += dt * (3 + ratio * 16);
+  p.spd = ratio;
   p.wag += dt * (7 + ratio * 8);
   p.chomp = Math.max(0, p.chomp - dt);
   p.invuln = Math.max(0, p.invuln - dt);
@@ -706,8 +709,42 @@ function update(dt) {
 // Hrozna's shape as ellipses [x, y, rx, ry] in units of her size, facing right.
 // A big snack hurts only when it touches her body or head (a little
 // forgiving). A small snack is eaten when it touches any part of her.
-const CORGI_HURT = [[0, 0, 1.0, 0.5], [1.05, -0.5, 0.42, 0.38], [1.45, -0.42, 0.3, 0.2]];
-const CORGI_EAT = CORGI_HURT.concat([[-0.05, 0.45, 0.85, 0.32], [-1.3, -0.45, 0.3, 0.42], [1.0, -1.0, 0.25, 0.4]]);
+// These first values fit the drawn corgi (used until the photos load).
+let CORGI_HURT = [[0, 0, 1.0, 0.5], [1.05, -0.5, 0.42, 0.38], [1.45, -0.42, 0.3, 0.2]];
+let CORGI_EAT = CORGI_HURT.concat([[-0.05, 0.45, 0.85, 0.32], [-1.3, -0.45, 0.3, 0.42], [1.0, -1.0, 0.25, 0.4]]);
+
+// ---------- Hrozna's photo animation ----------
+// Three photo frames of a walk cycle (transparent WebP, 1100 x 648 px).
+// 1 unit of size s = 310 px (half the length of her torso); the origin is
+// the middle of her torso at pixel (550, 390). The ovals below were fitted
+// to the visible pixels of all three frames.
+const HROZNA = {
+  src: [1, 2, 3].map(i => `sprites/hrozna_walk_${i}.webp`), frames: [], ready: false,
+  U: 310, OX: 550, OY: 390, W: 1100, H: 648,
+  hurt: [[0, 0, 1.0, 0.4], [0.87, -0.19, 0.26, 0.48], [1.32, -0.61, 0.35, 0.31], [1.58, -0.42, 0.18, 0.13]],
+  extra: [[0.1, 0.5, 1.12, 0.28], [-1.32, -0.29, 0.45, 0.23], [1.24, -1.0, 0.19, 0.21]], // legs, tail, ears
+};
+(function loadHrozna() {
+  let left = HROZNA.src.length;
+  HROZNA.frames = HROZNA.src.map(src => {
+    const im = new Image();
+    im.onload = () => {
+      if (--left) return;
+      HROZNA.ready = true;
+      CORGI_HURT = HROZNA.hurt; CORGI_EAT = HROZNA.hurt.concat(HROZNA.extra);
+      measureCorgi();
+    };
+    im.src = src;
+    return im;
+  });
+})();
+function drawHrozna(p) {
+  // walk frames follow her leg rhythm; when she stands still, show frame 1
+  const f = (p.spd || 0) < 0.06 ? 0 : Math.floor(p.legPh / (Math.PI * 2 / 3)) % 3;
+  const H = HROZNA, u = 1 / H.U;
+  g.imageSmoothingQuality = 'high';
+  g.drawImage(H.frames[f], -H.OX * u, -H.OY * u, H.W * u, H.H * u);
+}
 function touches(it, p, shapes, scale) {
   const T = it.type, D = it.r * T.k;
   const dx = it.x - p.x, dy = it.y - p.y;
@@ -731,12 +768,21 @@ function measureCorgi() {
   const keep = g; g = x;
   try { drawCorgi({ x: 0, y: 0, s: 100, face: 1, faceAnim: 1, legPh: 0, wag: 0, chomp: 0, invuln: 0, blink: 1, dead: false }); }
   finally { g = keep; }
-  const d = x.getImageData(0, 0, 800, 600).data; let n = 0, x0 = 800, x1 = 0, y0 = 600, y1 = 0;
+  let d;
+  try { d = x.getImageData(0, 0, 800, 600).data; }
+  catch (e) { // a page opened as a local file may not read the photo pixels: use the measured values
+    if (HROZNA.ready) { CORGI_R = 2.33; CORGI_W = 3.48; CORGI_H = 1.96; }
+    return;
+  }
+  let n = 0, x0 = 800, x1 = 0, y0 = 600, y1 = 0;
   for (let y = 0; y < 600; y += 2) for (let i = 0; i < 800; i += 2) if (d[(y * 800 + i) * 4 + 3] > 128) {
     n += 4; x0 = Math.min(x0, i); x1 = Math.max(x1, i); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
   }
   // in units of s (she was drawn at s = 100)
-  if (n > 1000) CORGI_R = perceived(n / 1e4, Math.max(x1 - x0, y1 - y0) / 100);
+  if (n > 1000) {
+    CORGI_R = perceived(n / 1e4, Math.max(x1 - x0, y1 - y0) / 100);
+    CORGI_W = (x1 - x0) / 100; CORGI_H = (y1 - y0) / 100;
+  }
 }
 
 // ---------- Rendering ----------
@@ -790,6 +836,7 @@ function drawCorgi(p) {
   const sq = p.chomp > 0 ? 1 + Math.sin(p.chomp / 0.3 * Math.PI) * 0.06 : 1;
   const breathe = 1 + Math.sin(time * 3) * 0.015;
   g.scale(p.s * p.faceAnim * sq, p.s * breathe / sq);
+  if (HROZNA.ready) { drawHrozna(p); g.restore(); return; }
   g.lineJoin = 'round'; g.lineCap = 'round';
   g.strokeStyle = line; g.lineWidth = 0.07;
 
