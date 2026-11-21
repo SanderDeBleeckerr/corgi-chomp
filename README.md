@@ -7,6 +7,7 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (b
 ## How to play
 
 - **Move:** mouse, touch, or WASD / arrow keys
+- **Phone / tablet:** tilt the device to move. The angle you hold it at when you tap Play counts as level. A finger on the screen overrides the tilt; the 📱 button turns tilt on or off
 - Snacks **smaller** than Hrozna: eat them and grow
 - Snacks **bigger** than Hrozna: touching one costs a heart
 - Hrozna grows through 15 sizes. The camera zooms out two times as she grows

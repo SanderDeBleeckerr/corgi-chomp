@@ -30,6 +30,7 @@
   .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,#f7b267,#f4845f);transition:width .2s}
   .lives{background:var(--panel);border:3px solid var(--ink);border-radius:16px;padding:6px 12px;font-size:22px;box-shadow:0 4px 0 rgba(74,47,27,.35);min-height:44px;display:flex;align-items:center}
   .btn-s{width:44px;height:44px;border-radius:14px;border:3px solid var(--ink);background:var(--panel);font-size:20px;cursor:pointer;box-shadow:0 4px 0 rgba(74,47,27,.35)}
+  .btn-s.off{opacity:.45}
   .btn-s:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(74,47,27,.35)}
   .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(255,240,225,.35);backdrop-filter:blur(2px)}
   .overlay.on{display:flex}
@@ -45,7 +46,7 @@
   .play:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
   .small{font-size:13px;opacity:.8}
   @media (max-width:520px){
-    .hud-left{top:8px;left:8px;min-width:0;width:calc(100% - 172px);padding:6px 10px;border-radius:12px}
+    .hud-left{top:8px;left:8px;min-width:0;width:calc(100% - 236px);padding:6px 10px;border-radius:12px}
     .score{font-size:20px} .lvl{font-size:11px}
     .hud-right{top:8px;right:8px;gap:5px}
     .lives{font-size:14px;padding:4px 7px;min-height:38px;border-radius:12px}
@@ -68,6 +69,7 @@
   </div>
   <div class="hud-right">
     <div class="lives" id="lives"></div>
+    <button class="btn-s" id="tiltBtn" title="Tilt control" style="display:none">📱</button>
     <button class="btn-s" id="muteBtn" title="Mute (M)">🔊</button>
     <button class="btn-s" id="pauseBtn" title="Pause (P)">⏸</button>
   </div>
@@ -81,6 +83,7 @@
     <div class="foods">🧈🍰🎂🍞🐁🐟🧇<img id="yogurtIcon" alt="yogurt" style="width:1.15em;height:1.15em;vertical-align:-0.2em">🥕🍎</div>
     <div class="rules">
       🐾 Move with the <b>mouse / finger</b>, or <b>WASD / arrow keys</b><br>
+      📱 On a phone: <b>tilt</b> the phone to move. Hold it the way you like when you tap Play<br>
       🟢 Snacks <b class="g">smaller</b> than Hrozna: eat them and grow!<br>
       🔴 Snacks <b class="r">bigger</b> than Hrozna: do not touch them, or you lose a heart<br>
       🔭 As she grows, the camera zooms out <b>two times</b><br>
@@ -260,8 +263,68 @@ addEventListener('keydown', e => {
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) pointer.active = false;
 });
 addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
-cv.addEventListener('pointermove', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; });
-cv.addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; initAudio(); });
+cv.addEventListener('pointermove', e => {
+  if (e.pointerType === 'touch' && !pointer.down) return;
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true;
+});
+cv.addEventListener('pointerdown', e => { pointer.x = e.clientX; pointer.y = e.clientY; pointer.active = true; pointer.down = true; initAudio(); });
+const touchUp = e => { pointer.down = false; if (e.pointerType === 'touch' && tilt.on) pointer.active = false; };
+cv.addEventListener('pointerup', touchUp); cv.addEventListener('pointercancel', touchUp);
+
+// ---------- Tilt (accelerometer / gyroscope) ----------
+// On phones and tablets Hrozna follows the tilt of the device. The angle
+// the device has when a game starts (or resumes) counts as "level", so the
+// player can hold it in any comfortable way. A finger on the screen
+// overrides the tilt while it touches.
+const TILT_DEAD = 2.5, TILT_FULL = 18; // degrees
+const isTouch = matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+const tilt = { supported: isTouch && 'DeviceOrientationEvent' in window, wanted: true, on: false, asked: false, x: 0, y: 0, ref: null, needCal: true };
+function screenAngle() {
+  const a = (screen.orientation && screen.orientation.angle) ?? window.orientation ?? 0;
+  return ((a % 360) + 360) % 360;
+}
+function tiltAxes(beta, gamma) {
+  switch (screenAngle()) {
+    case 90:  return [beta, -gamma];
+    case 180: return [-gamma, -beta];
+    case 270: return [-beta, gamma];
+    default:  return [gamma, beta];
+  }
+}
+const wrap = a => ((a + 540) % 360) - 180;
+function onOrient(e) {
+  if (e.beta == null || e.gamma == null) return;
+  const [ax, ay] = tiltAxes(e.beta, e.gamma);
+  if (tilt.needCal || !tilt.ref) { tilt.ref = [ax, ay]; tilt.needCal = false; }
+  const map = d => { const m = Math.max(0, Math.abs(d) - TILT_DEAD); return Math.sign(d) * Math.min(1, m / (TILT_FULL - TILT_DEAD)); };
+  tilt.x = map(wrap(ax - tilt.ref[0])); tilt.y = map(wrap(ay - tilt.ref[1]));
+  if (!tilt.on && tilt.wanted) { tilt.on = true; pointer.active = false; updateTiltBtn(); }
+}
+function enableTilt() {
+  // must run inside a tap/click: iOS asks the player for permission here
+  if (!tilt.supported || !tilt.wanted) return;
+  tilt.needCal = true;
+  if (tilt.asked) return;
+  tilt.asked = true;
+  // Tilt turns on only when real sensor data arrives, so if the player
+  // says no (or the device has no sensor), touch control simply stays.
+  addEventListener('deviceorientation', onOrient);
+  const DOE = window.DeviceOrientationEvent;
+  if (typeof DOE.requestPermission === 'function') DOE.requestPermission().catch(() => { tilt.asked = false; });
+}
+function toggleTilt() {
+  tilt.wanted = !tilt.wanted;
+  if (tilt.wanted) enableTilt(); else { tilt.on = false; tilt.x = tilt.y = 0; }
+  updateTiltBtn();
+}
+function updateTiltBtn() {
+  const b = document.getElementById('tiltBtn');
+  b.style.display = tilt.supported ? '' : 'none';
+  b.classList.toggle('off', !tilt.wanted);
+  b.title = tilt.wanted ? 'Tilt control is on (tap to turn off)' : 'Tilt control is off (tap to turn on)';
+}
+addEventListener('orientationchange', () => { tilt.needCal = true; });
+if (screen.orientation) screen.orientation.addEventListener('change', () => { tilt.needCal = true; });
 addEventListener('blur', () => { if (state === 'play') togglePause(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden && state === 'play') togglePause(); });
 
@@ -327,9 +390,12 @@ $('againBtn').onclick = startGame;
 $('resumeBtn').onclick = togglePause;
 $('pauseBtn').onclick = togglePause;
 $('muteBtn').onclick = toggleMute;
+$('tiltBtn').onclick = toggleTilt;
+updateTiltBtn();
 $('bestMenu').textContent = best ? `Best score: ${best}` : '';
 
 function startGame() {
+  enableTilt();
   initAudio();
   reset();
   state = 'play';
@@ -340,7 +406,7 @@ function startGame() {
 }
 function togglePause() {
   if (state === 'play') { state = 'paused'; $('pauseOv').classList.add('on'); }
-  else if (state === 'paused') { state = 'play'; $('pauseOv').classList.remove('on'); last = performance.now(); }
+  else if (state === 'paused') { enableTilt(); state = 'play'; $('pauseOv').classList.remove('on'); last = performance.now(); }
 }
 function gameOver() {
   state = 'over';
@@ -448,7 +514,11 @@ function update(dt) {
     let ky = (keys['s'] || keys['arrowdown'] ? 1 : 0) - (keys['w'] || keys['arrowup'] ? 1 : 0);
     if (kx || ky) {
       const l = Math.hypot(kx, ky); dvx = kx / l * maxSpd; dvy = ky / l * maxSpd;
-    } else if (pointer.active) {
+    } else if (tilt.on && !pointer.down && (tilt.x || tilt.y)) {
+      // tilt: the angle sets the speed and the direction
+      const l = Math.max(1, Math.hypot(tilt.x, tilt.y));
+      dvx = tilt.x / l * maxSpd; dvy = tilt.y / l * maxSpd;
+    } else if (pointer.active && !(tilt.on && !pointer.down)) {
       // aim the head at the pointer
       const tx = (pointer.x - W / 2) / zoom - p.faceAnim * p.s * 1.1;
       const ty = (pointer.y - H / 2) / zoom + p.s * 0.4;
