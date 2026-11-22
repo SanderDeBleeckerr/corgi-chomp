@@ -1,6 +1,6 @@
 # Corgi Chomp 🐶
 
-A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (butter, cake, birthday cake, bread, mice, fish, waffles, yogurt, carrots, apples) while dodging the ones that are too big. Every snack she eats makes her bigger, so foods that were dangerous at the start become edible later.
+A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (hand-drawn grass, sausages, mice, carrots and birthday cakes) while dodging the ones that are too big. Every snack she eats makes her bigger, so foods that were dangerous at the start become edible later.
 
 **Play it online:** https://sanderdebleeckerr.github.io/corgi-chomp/
 
@@ -13,16 +13,22 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (b
   - 👆 **Finger:** Hrozna follows your finger
 - Snacks **smaller** than Hrozna: eat them and grow. The game compares the size you see (a mix of visible area and length), so a flat butter and a round apple are judged the same way
 - Snacks **bigger** than Hrozna: touching one costs a heart
-- Every kind of snack has its own fixed size, from small to big: mouse, carrot, apple, yogurt, butter, fish, waffle, bread, cake, birthday cake. Each kind is 1.55x bigger than the one before it
-- Hrozna grows through 20 ranks. The camera zooms out two times as she grows
-- **Top Dog:** when she is bigger than the birthday cake, nothing can hurt her any more
-- **Screen Filler:** she keeps growing until she fills the whole screen. Then every snack gives double points. The game has no end: keep eating for a high score
+- Every kind of snack has its own fixed size, from small to big: grass, sausages, mouse, carrot, birthday cake
+- Hrozna grows through 22 ranks. The camera zooms out two times as she grows
+- **Top Dog:** when she is bigger than the birthday cake, nothing can hurt her any more, and she grows faster
+- **Screen Filler:** she grows until she fills the whole screen, and then 2 ranks more (Galaxy Gobbler, Legendary Hrozna) until she is bigger than the screen. Then every snack gives double points. The game has no end: keep eating for a high score
 - **P / Esc:** pause · **M:** mute
 
 ## Art
 
 - `sprites/hrozna_walk_1-3.webp`: Hrozna's walk cycle, cut from photos (transparent WebP, 1100 x 648 px, same crop for all frames). 1 size unit = 310 px; the middle of her torso is at pixel (550, 390).
 - `sounds/bark1-8.mp3`: Hrozna's real barks.
+
+### Add or change a snack drawing
+
+1. Put the drawing in `art/foods/` as a PNG or WebP with a transparent background (for example `art/foods/apple.png`).
+2. Run `python3 tools/build_foods.py`. It makes `sprites/food_apple.webp` and measures the visible shape (for size and collisions) into `sprites/foods.js`.
+3. Add a line to the `FOODS` list in `index.html` with its id, fixed size and movement.
 
 ## Run locally
 

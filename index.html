@@ -38,7 +38,8 @@
   h1{margin:0 0 4px;font-size:clamp(36px,8vw,58px);letter-spacing:1px;color:var(--tan-d);text-shadow:3px 3px 0 var(--ink)}
   h2{margin:0 0 8px;font-size:34px;color:var(--tan-d);text-shadow:2px 2px 0 var(--ink)}
   p{margin:8px 0;line-height:1.45}
-  .foods{font-size:30px;letter-spacing:4px;margin:10px 0}
+  .foods{display:flex;justify-content:center;align-items:flex-end;gap:6px;margin:10px 0}
+  .foods img{width:clamp(36px,10vw,56px);height:auto}
   .rules{text-align:left;font-size:15px;background:#fff3e3;border:2px dashed var(--tan);border-radius:14px;padding:10px 14px;margin:12px 0}
   .rules b.g{color:var(--good)} .rules b.r{color:var(--bad)}
   .play{font:inherit;font-size:24px;font-weight:900;padding:12px 38px;border-radius:18px;border:4px solid var(--ink);background:linear-gradient(#ffc48a,#f4945a);color:var(--ink);cursor:pointer;box-shadow:0 6px 0 var(--ink);margin-top:8px}
@@ -81,13 +82,13 @@
     <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(240px,60%);display:block;margin:-6px auto 0">
     <h1>Corgi Chomp</h1>
     <p>Hrozna the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
-    <div class="foods" title="From smallest to biggest">🐁🥕🍎<img id="yogurtIcon" alt="yogurt" style="width:1.15em;height:1.15em;vertical-align:-0.2em">🧈🐟🧇🍞🍰🎂</div>
+    <div class="foods" id="menuFoods" title="From smallest to biggest"></div>
     <div class="rules">
       🐾 Move with the <b>mouse / finger</b>, or <b>WASD / arrow keys</b><br>
       📱 On a phone: <b>tilt</b> it, use the <b>joystick</b> 🕹️, or your <b>finger</b> 👆. Tap the control button at the top to change<br>
       🟢 Snacks <b class="g">smaller</b> than Hrozna: eat them and grow!<br>
       🔴 Snacks <b class="r">bigger</b> than Hrozna: do not touch them, or you lose a heart<br>
-      📏 Every kind of snack has <b>its own size</b>: 🐁 is the smallest, 🎂 the biggest<br>
+      📏 Every kind of snack has <b>its own size</b>: the grass is the smallest, the birthday cake the biggest<br>
       🔭 As she grows, the camera zooms out <b>two times</b><br>
       👑 Outgrow <b>everything</b> and nothing can hurt her. Then grow until she <b>fills the screen</b>
     </div>
@@ -114,6 +115,7 @@
   </div>
 </div>
 
+<script src="sprites/foods.js"></script>
 <script>
 (() => {
 'use strict';
@@ -134,119 +136,68 @@ const rand = (a, b) => a + Math.random() * (b - a);
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------- Food ----------
-const SPR = 256; // sprite resolution (big enough for a half-screen snack)
-function drawYogurt(x) {
-  // a small yogurt pot with a strawberry label, drawn on a 128 grid
-  x.save(); x.scale(SPR / 128, SPR / 128);
-  x.lineJoin = 'round'; x.lineWidth = 4; x.strokeStyle = '#5a3a20';
-  // spoon
-  x.save(); x.translate(84, 30); x.rotate(0.45);
-  x.fillStyle = '#d7dde3'; x.fillRect(-4, -34, 8, 40); x.strokeRect(-4, -34, 8, 40);
-  x.restore();
-  // cup
-  x.beginPath(); x.moveTo(24, 38); x.lineTo(104, 38); x.lineTo(94, 112); x.quadraticCurveTo(64, 120, 34, 112); x.closePath();
-  x.fillStyle = '#fdfbf7'; x.fill(); x.stroke();
-  // label band
-  x.save(); x.clip();
-  x.fillStyle = '#f7a8c0'; x.fillRect(0, 60, 128, 34);
-  x.fillStyle = '#e35d8a'; x.fillRect(0, 60, 128, 5); x.fillRect(0, 89, 128, 5);
-  x.restore();
-  // strawberry on label
-  x.beginPath(); x.moveTo(52, 70); x.quadraticCurveTo(64, 64, 76, 70); x.quadraticCurveTo(74, 86, 64, 92); x.quadraticCurveTo(54, 86, 52, 70);
-  x.fillStyle = '#e53950'; x.fill(); x.lineWidth = 2.5; x.stroke();
-  x.fillStyle = '#4caf50'; x.beginPath(); x.ellipse(64, 67, 9, 4, 0, 0, 7); x.fill();
-  x.fillStyle = '#ffe9a8'; for (const [a, b] of [[59, 76], [68, 75], [64, 83]]) { x.beginPath(); x.arc(a, b, 1.6, 0, 7); x.fill(); }
-  // lid + creamy top
-  x.lineWidth = 4;
-  x.beginPath(); x.ellipse(64, 38, 44, 11, 0, 0, 7); x.fillStyle = '#ffffff'; x.fill(); x.stroke();
-  x.beginPath(); x.ellipse(64, 37, 34, 7, 0, 0, 7); x.fillStyle = '#ffe1ea'; x.fill();
-  x.restore();
-}
+// The snacks are hand-drawn (art/foods/). tools/build_foods.py turns each
+// drawing into sprites/food_<name>.webp and measures its visible shape into
+// sprites/foods.js (FOOD_META): visible area, longest side, middle point and
+// collision points. So the game does not need to read pixels at run time.
+//
 // Every kind of snack has one fixed size. "size" is its perceived size in
 // units of Hrozna's size at the start of a game (1 = as big as she starts).
-// Each kind is 1.55x bigger than the one before it.
 const FOODS = [
-  { name: 'Mouse',  e: '🐁', move: 'scurry', col: ['#b0a8a0', '#f3c1c8'], spd: 1.35, flip: true },
-  { name: 'Carrot', e: '🥕', move: 'spin', col: ['#f28c28', '#ffb366', '#4caf50'], spd: 1.05 },
-  { name: 'Apple',  e: '🍎', move: 'spin', col: ['#e53935', '#fff3e0', '#7cb342'], spd: 1 },
-  { name: 'Yogurt', draw: drawYogurt, move: 'drift', col: ['#fdfbf7', '#f7a8c0', '#e35d8a'], spd: 1 },
-  { name: 'Butter', e: '🧈', move: 'drift', col: ['#f7d774', '#fff1a8'], spd: 1 },
-  { name: 'Fish',   e: '🐟', move: 'swim', col: ['#6fb3e0', '#cfe9ff'], spd: 1.2, flip: true },
-  { name: 'Waffle', e: '🧇', move: 'spin', col: ['#d9a050', '#f6d08a'], spd: 0.9 },
-  { name: 'Bread',  e: '🍞', move: 'drift', col: ['#d9a35f', '#f3d39b'], spd: 1 },
-  { name: 'Cake',   e: '🍰', move: 'drift', col: ['#f5b7c5', '#fff', '#e35d6a'], spd: 0.9 },
-  { name: 'Birthday cake', e: '🎂', move: 'drift', col: ['#f5b7c5', '#fff', '#8a5a3c', '#ffd23f'], spd: 0.85 },
+  { id: 'grass',    name: 'Grass',    size: 0.35, move: 'drift',  col: ['#8bc34a', '#4caf50', '#2e7d6b'], spd: 0.9 },
+  { id: 'sausages', name: 'Sausages', size: 0.55, move: 'spin',   col: ['#e0405a', '#ff6b6b', '#9e9e9e'], spd: 1 },
+  { id: 'mouse',    name: 'Mouse',    size: 1.7,  move: 'scurry', col: ['#e0e0e0', '#9e9e9e', '#f3a6a6'], spd: 1.35, flip: true },
+  { id: 'carrot',   name: 'Carrot',   size: 4.5,  move: 'spin',   col: ['#f28c28', '#e8603c', '#8bc34a'], spd: 1.05 },
+  { id: 'cake',     name: 'Birthday cake', size: 12, move: 'drift', col: ['#d9a35f', '#7b4fa8', '#e0474c', '#f2c94c'], spd: 0.85 },
 ];
-FOODS.forEach((f, i) => { f.size = 0.42 * Math.pow(1.55, i); });
-for (const f of FOODS) {
-  const c = document.createElement('canvas'); c.width = c.height = SPR;
-  const x = c.getContext('2d');
-  if (f.draw) f.draw(x);
-  else {
-    x.font = `${SPR * 0.78}px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif`;
-    x.textAlign = 'center'; x.textBaseline = 'middle';
-    x.fillText(f.e, SPR / 2, SPR * 0.55);
-  }
-  f.sprite = c;
-  analyseSprite(f);
-}
-// Look at the pixels a snack really covers. People judge "how big" from a
-// mix of area and length, so the game uses a perceived size:
-//   size = sqrt( sqrt(visible area) * longest side )
-// for the snacks and for Hrozna alike. A flat butter and a round apple of
-// the same size then look equally big next to her. The emoji font differs
-// per device, so this runs on load.
+// People judge "how big" from a mix of area and length, so the game uses a
+// perceived size:  size = sqrt( sqrt(visible area) * longest side )
+// for the snacks and for Hrozna alike.
 function perceived(area, ext) { return Math.sqrt(Math.sqrt(area) * ext); }
-function analyseSprite(f) {
-  const S = SPR, d = f.sprite.getContext('2d').getImageData(0, 0, S, S).data;
-  const on = (x, y) => d[((y | 0) * S + (x | 0)) * 4 + 3] > 128;
-  let n = 0, sx = 0, sy = 0, x0 = S, x1 = 0, y0 = S, y1 = 0;
-  for (let y = 0; y < S; y += 2) for (let x = 0; x < S; x += 2) if (on(x, y)) {
-    n++; sx += x; sy += y; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y);
-  }
-  const area = n * 4 / (S * S);
-  if (area < 0.02) { // no emoji font: treat it as a round snack
-    f.cx = f.cy = 0.5; f.ext = 0.7; f.k = 1 / perceived(0.4, 0.7);
-    f.pts = Array.from({ length: 24 }, (_, i) => [Math.cos(i / 24 * 6.283) * 0.3, Math.sin(i / 24 * 6.283) * 0.3]);
-  } else {
-    f.cx = sx / n / S; f.cy = sy / n / S;   // centre of the visible pixels
-    f.ext = Math.max(x1 - x0, y1 - y0) / S; // longest side
-    f.k = 1 / perceived(area, f.ext);       // draw size = k * r gives perceived size r
-    f.pts = [];                             // outline samples for collisions
-    const G = 18;
-    for (let j = 0; j < G; j++) for (let i = 0; i < G; i++) {
-      const x = (i + 0.5) / G * S, y = (j + 0.5) / G * S;
-      if (on(x, y)) f.pts.push([x / S - f.cx, y / S - f.cy]);
-    }
-  }
+let foodsLeft = FOODS.length;
+for (const f of FOODS) {
+  const m = window.FOOD_META[f.id];
+  f.cx = m.cx; f.cy = m.cy; f.ext = m.ext; f.pts = m.pts;
+  f.k = 1 / perceived(m.area, m.ext); // draw size = k * r gives perceived size r
   f.reach = Math.max(...f.pts.map(([a, b]) => Math.hypot(a, b))) + 0.05;
+  f.sprite = new Image();
+  f.sprite.onload = () => { if (--foodsLeft === 0) startLoop(); };
+  f.sprite.src = m.src;
 }
-document.getElementById('yogurtIcon').src = FOODS.find(f => f.name === 'Yogurt').sprite.toDataURL();
+document.getElementById('menuFoods').innerHTML = FOODS.map(f => `<img src="${window.FOOD_META[f.id].src}" alt="${f.name}" title="${f.name}">`).join('');
 
 // ---------- Growth + camera ----------
 // The camera stays still while Hrozna grows on screen. When she fills
 // ZOOM_FRAC of the screen, the camera zooms out (two times in total).
 // When she is bigger than the biggest snack, nothing can hurt her any more
-// ("top dog"). She keeps growing until she fills the whole screen (MAX_S),
-// and after that she keeps eating for points.
+// ("top dog"), and she grows faster. She keeps growing until she fills the
+// whole screen (FILL_S), then for 2 more ranks until she is even bigger than
+// the screen (MAX_S). After that she keeps eating for points.
 const START_S = 22;
 const START_FRAC = 0.11, ZOOM_FRAC = 0.28, ZOOM_STEP = 0.4, ZOOM_OUTS = 2, FILL_FRAC = 1.0;
 const ZOOM_S = Array.from({ length: ZOOM_OUTS }, (_, i) => START_S * ZOOM_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, i)));
-const MAX_S = START_S * FILL_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, ZOOM_OUTS));
+const FILL_S = START_S * FILL_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, ZOOM_OUTS));
+const EXTRA_STEP = 1.25; // each of the 2 ranks after "Screen Filler" makes her 1.25x bigger
+const MAX_S = FILL_S * EXTRA_STEP * EXTRA_STEP;
 const TOP_S = START_S * FOODS[FOODS.length - 1].size; // bigger than this: bigger than every snack
 const LEVEL_NAMES = [
   'Tiny Pup', 'Puppy', 'Good Girl', 'Fluffy Loaf', 'Chonky Corgi', 'Mega Chonk',
   'Bread Loaf Legend', 'Snack Queen', 'Couch Crusher', 'Fridge Raider', 'Bakery Bandit',
   'Street Sweeper', 'Town Legend', 'Kaiju Corgi', 'Cake Conqueror', 'City Muncher',
   'Mountain Mutt', 'Sky Swallower', 'Cosmic Corgi', 'Screen Filler',
+  'Galaxy Gobbler', 'Legendary Hrozna',
 ];
-const LEVELS = LEVEL_NAMES.map((name, i) => ({ name, s: START_S * Math.pow(MAX_S / START_S, i / (LEVEL_NAMES.length - 1)) }));
+const FILL_RANK = LEVEL_NAMES.indexOf('Screen Filler');
+const LEVELS = LEVEL_NAMES.map((name, i) => ({ name, s: i <= FILL_RANK
+  ? START_S * Math.pow(FILL_S / START_S, i / FILL_RANK)
+  : FILL_S * Math.pow(EXTRA_STEP, i - FILL_RANK) }));
 // A snack is edible when its perceived size is smaller than Hrozna's. The
 // game does not send new snacks of a kind that is in the unclear zone close
 // to her own size: only kinds at most 0.72x her size, or at least 1.2x.
 const EAT_RATIO = 1.0;
 const EDIBLE_MAX = 0.72, DANGER_MIN = 1.2;
 const GROW = 0.34; // part of a snack's area that Hrozna gains
+const TOP_BOOST = 1.2; // growth boost after Top Dog: x (size / Top Dog size)^TOP_BOOST
 let CORGI_R = 2.56; // Hrozna's perceived size, in units of her size value s (measured on load)
 const isEdible = it => it.r < CORGI_R * player.s * EAT_RATIO;
 
@@ -279,7 +230,10 @@ function spawnItem(forceSmall, anywhere) {
   // Which kinds can come: big enough to see, small enough to fit on the
   // screen, and not in the unclear zone close to Hrozna's own size.
   const unit = CORGI_R * START_S, me = player.s / START_S;
-  const ok = FOODS.filter(t => t.size * unit * z >= 13 * screenScale && t.size * unit * t.k * t.ext * z <= 0.75 * Math.min(W, H));
+  // (fits: its longest side is at most 80 % of the screen's longest side, and
+  // its perceived size at most 70 % of the screen's short side)
+  const ok = FOODS.filter(t => t.size * unit * z >= 13 * screenScale
+    && t.size * unit * t.k * t.ext * z <= 0.8 * Math.max(W, H) && t.size * unit * z <= 0.7 * Math.min(W, H));
   const small = ok.filter(t => t.size <= me * EDIBLE_MAX);
   const big = topDog ? [] : ok.filter(t => t.size >= me * DANGER_MIN);
   const pick = (list, w) => { let sum = 0; for (const t of list) sum += w(t); let x = Math.random() * sum; for (const t of list) { x -= w(t); if (x <= 0) return t; } return list[list.length - 1]; };
@@ -559,7 +513,10 @@ function eat(it) {
   const rel = it.r / CORGI_R; // snack size in Hrozna's size units
   // points: bigger kinds give more, and every rank adds 10 %; double at full size
   const gain = Math.max(1, Math.round(10 * it.type.size * (1 + level * 0.1) * (maxed ? 2 : 1)));
-  p.s = Math.min(MAX_S, Math.sqrt(p.s * p.s + GROW * rel * rel));
+  // After Top Dog, snacks count for more, so she can still grow fast while
+  // every snack is now small next to her.
+  const boost = topDog ? Math.pow(p.s / TOP_S, TOP_BOOST) : 1;
+  p.s = Math.min(MAX_S, Math.sqrt(p.s * p.s + GROW * boost * rel * rel));
   score += gain;
   p.chomp = 0.3;
   for (let i = 0; i < 12; i++) {
@@ -590,9 +547,14 @@ function eat(it) {
     banner('👑 TOP DOG! 👑', 'Bigger than everything: nothing can hurt Hrozna now!', true);
     sfx.bark();
   }
+  if (level === FILL_RANK && !p.filled) {
+    p.filled = true;
+    banner('🌍 SCREEN FILLER! 🌍', 'Hrozna fills the screen... and she is still growing!', true);
+    sfx.bark();
+  }
   if (!maxed && p.s >= MAX_S - 1e-6) {
     maxed = true;
-    banner('🌍 SCREEN FILLER! 🌍', 'Hrozna fills the screen! Every snack now gives double points', true);
+    banner('👑 LEGENDARY HROZNA! 👑', 'Bigger than the screen! Every snack now gives double points', true);
     sfx.bark();
   }
   updateHud();
@@ -982,16 +944,20 @@ function heart(x, y, r) {
 }
 
 // ---------- Loop ----------
-measureCorgi();
-reset();
+// start only when the snack drawings are loaded
 let last = performance.now();
+function startLoop() {
+  measureCorgi();
+  reset();
+  last = performance.now();
+  requestAnimationFrame(frame);
+}
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   if (state === 'play' || state === 'menu' || state === 'over') update(state === 'over' ? dt * 0.3 : dt);
   draw(state === 'paused' ? 0 : dt);
   requestAnimationFrame(frame);
 }
-requestAnimationFrame(frame);
 })();
 </script>
 </body>
