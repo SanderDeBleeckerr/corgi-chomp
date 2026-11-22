@@ -80,9 +80,9 @@
     .lives{font-size:14px;padding:4px 7px;min-height:38px;border-radius:12px}
     .btn-s{width:38px;height:38px;font-size:16px;border-radius:12px}
   }
-  #banner{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%);font-size:clamp(28px,6vw,48px);font-weight:900;color:#fff;text-shadow:3px 3px 0 var(--ink),-2px -2px 0 var(--ink),2px -2px 0 var(--ink),-2px 2px 0 var(--ink);pointer-events:none;opacity:0;white-space:nowrap;text-align:center}
-  #banner.show{animation:pop 2.2s ease-out forwards}
-  #banner small{display:block;font-size:.45em}
+  #banner{position:fixed;left:50%;top:22%;transform:translate(-50%,-50%);font-size:clamp(28px,6vw,48px);font-weight:900;color:#fff;text-shadow:.06em 0 0 var(--ink),-.06em 0 0 var(--ink),0 .06em 0 var(--ink),0 -.06em 0 var(--ink),.045em .045em 0 var(--ink),-.045em .045em 0 var(--ink),.045em -.045em 0 var(--ink),-.045em -.045em 0 var(--ink),.07em .1em 0 var(--ink);pointer-events:none;opacity:0;white-space:nowrap;text-align:center}
+  #banner.show{animation:pop 1.9s ease-out forwards}
+  #banner small{display:block;font-size:.45em;margin-top:.15em;letter-spacing:.03em;word-spacing:.2em}
   @keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.15)}22%{transform:translate(-50%,-50%) scale(1)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-60%) scale(1)}}
 </style>
 </head>
@@ -570,7 +570,7 @@ function gameOver() {
 function banner(text, sub, now) {
   if (now) { bannerQ = []; bannerUntil = 0; }
   if (time < bannerUntil) { bannerQ.push([text, sub]); return; }
-  bannerUntil = time + 1.5;
+  bannerUntil = time + 1.9; // the next banner waits until this one has faded out
   const b = $('banner');
   b.innerHTML = text + (sub ? `<small>${sub}</small>` : '');
   b.classList.remove('show'); void b.offsetWidth; b.classList.add('show');
@@ -604,17 +604,22 @@ function eat(it) {
   const yum = ['Yum!', 'Nom!', 'Chomp!', 'Tasty!', 'Woof!', 'Mmm!'];
   popups.push({ x: it.x, y: it.y - it.r, text: `+${gain}` + (Math.random() < 0.35 ? ' ' + yum[(Math.random() * yum.length) | 0] : ''), life: 1, color: '#fff' });
   sfx.chomp();
+  let rankUp = { bonus: false, any: false };
   while (level < LEVELS.length - 1 && p.s >= LEVELS[level + 1].s - 1e-6) {
     level++;
     const bonus = lives < 3;
     if (bonus) lives++;
     sfx.level();
-    if (level < LEVELS.length - 1) banner(`⭐ ${LEVELS[level].name}! ⭐`, bonus ? '+1 heart' : topDog ? 'Keep growing!' : 'Bigger snacks are on the menu!');
+    rankUp = { bonus: rankUp.bonus || bonus, any: true };
     for (let i = 0; i < 24; i++) {
       const a = rand(0, Math.PI * 2), sp = rand(80, 260) / zoom;
       particles.push({ x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: rand(0.6, 1.2), max: 1.2, size: rand(6, 11) / zoom, color: '#ffd23f', kind: 'star' });
     }
   }
+  // one banner, for the newest rank only (a big snack can give 2 ranks at once)
+  if (rankUp.any && level < LEVELS.length - 1)
+    banner(`⭐ ${LEVELS[level].name}! ⭐`, rankUp.bonus ? '+1 heart' : topDog ? 'Keep growing!' : 'Bigger snacks are on the menu!');
+
   while (zstage < ZOOM_OUTS && p.s >= ZOOM_S[zstage]) {
     // Before the camera zooms out, fill the area that comes into view with
     // snacks, so the new view is not empty around the old one.
