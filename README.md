@@ -15,9 +15,9 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (h
 - Snacks **bigger** than Hrozna: touching one costs a heart
 - Every kind of snack has its own fixed size, from small to big: grass, sausages, apple, yogurt, butter, waffle, mouse, carrot, ball, birthday cake. Each kind is 1.6x bigger than the one before it
 - **🎲 Mixed sizes** (option on the start screen, off by default): every kind of snack can come in any size, so you can meet a big mouse and a small mouse
-- Hrozna grows through 22 ranks. The camera zooms out two times as she grows
+- Hrozna grows through 20 ranks. The camera zooms out two times as she grows
 - **Top Dog:** when she is bigger than the birthday cake, nothing can hurt her any more, and she grows faster
-- **Screen Filler:** she grows until she fills the whole screen, and then 2 ranks more (Galaxy Gobbler, Legendary Hrozna) until she is bigger than the screen. Then every snack gives double points. The game has no end: keep eating for a high score
+- **Screen Filler:** she grows until she fills the whole screen. Then every snack gives double points. The game has no end: keep eating for a high score
 - **P / Esc:** pause · **M:** mute
 
 ## Art

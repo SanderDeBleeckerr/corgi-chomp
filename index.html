@@ -188,26 +188,20 @@ document.getElementById('menuFoods').innerHTML = FOODS.map(f => `<img src="${win
 // ZOOM_FRAC of the screen, the camera zooms out (two times in total).
 // When she is bigger than the biggest snack, nothing can hurt her any more
 // ("top dog"), and she grows faster. She keeps growing until she fills the
-// whole screen (FILL_S), then for 2 more ranks until she is even bigger than
-// the screen (MAX_S). After that she keeps eating for points.
+// whole screen (MAX_S). After that she keeps eating for points.
 const START_S = 22;
 const START_FRAC = 0.11, ZOOM_FRAC = 0.28, ZOOM_STEP = 0.4, ZOOM_OUTS = 2, FILL_FRAC = 1.0;
 const ZOOM_S = Array.from({ length: ZOOM_OUTS }, (_, i) => START_S * ZOOM_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, i)));
 const FILL_S = START_S * FILL_FRAC / (START_FRAC * Math.pow(ZOOM_STEP, ZOOM_OUTS));
-const EXTRA_STEP = 1.25; // each of the 2 ranks after "Screen Filler" makes her 1.25x bigger
-const MAX_S = FILL_S * EXTRA_STEP * EXTRA_STEP;
+const MAX_S = FILL_S;
 const TOP_S = START_S * FOODS[FOODS.length - 1].size; // bigger than this: bigger than every snack
 const LEVEL_NAMES = [
   'Tiny Pup', 'Puppy', 'Good Girl', 'Fluffy Loaf', 'Chonky Corgi', 'Mega Chonk',
   'Bread Loaf Legend', 'Snack Queen', 'Couch Crusher', 'Fridge Raider', 'Bakery Bandit',
   'Street Sweeper', 'Town Legend', 'Kaiju Corgi', 'Cake Conqueror', 'City Muncher',
   'Mountain Mutt', 'Sky Swallower', 'Cosmic Corgi', 'Screen Filler',
-  'Galaxy Gobbler', 'Legendary Hrozna',
 ];
-const FILL_RANK = LEVEL_NAMES.indexOf('Screen Filler');
-const LEVELS = LEVEL_NAMES.map((name, i) => ({ name, s: i <= FILL_RANK
-  ? START_S * Math.pow(FILL_S / START_S, i / FILL_RANK)
-  : FILL_S * Math.pow(EXTRA_STEP, i - FILL_RANK) }));
+const LEVELS = LEVEL_NAMES.map((name, i) => ({ name, s: START_S * Math.pow(MAX_S / START_S, i / (LEVEL_NAMES.length - 1)) }));
 // A snack is edible when its perceived size is smaller than Hrozna's. The
 // game does not send new snacks of a kind that is in the unclear zone close
 // to her own size: only kinds at most 0.72x her size, or at least 1.2x.
@@ -579,14 +573,9 @@ function eat(it) {
     banner('👑 TOP DOG! 👑', 'Bigger than everything: nothing can hurt Hrozna now!', true);
     sfx.bark();
   }
-  if (level === FILL_RANK && !p.filled) {
-    p.filled = true;
-    banner('🌍 SCREEN FILLER! 🌍', 'Hrozna fills the screen... and she is still growing!', true);
-    sfx.bark();
-  }
   if (!maxed && p.s >= MAX_S - 1e-6) {
     maxed = true;
-    banner('👑 LEGENDARY HROZNA! 👑', 'Bigger than the screen! Every snack now gives double points', true);
+    banner('🌍 SCREEN FILLER! 🌍', 'Hrozna fills the screen! Every snack now gives double points', true);
     sfx.bark();
   }
   updateHud();
