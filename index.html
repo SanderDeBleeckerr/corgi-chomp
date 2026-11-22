@@ -39,9 +39,15 @@
   h2{margin:0 0 8px;font-size:34px;color:var(--tan-d);text-shadow:2px 2px 0 var(--ink)}
   p{margin:8px 0;line-height:1.45}
   .foods{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px 6px;margin:8px 0}
-  .foods img{width:clamp(30px,8.5vw,44px);height:auto}
+  .foods img{width:clamp(26px,7.5vw,40px);height:auto}
   .rules{text-align:left;font-size:15px;background:#fff3e3;border:2px dashed var(--tan);border-radius:14px;padding:10px 14px;margin:12px 0}
   .rules b.g{color:var(--good)} .rules b.r{color:var(--bad)}
+  .bday{display:inline-block;margin:2px 0 4px;padding:6px 16px;border-radius:999px;border:3px solid var(--ink);
+    background:linear-gradient(90deg,#ffd1dc,#ffe9a8,#c8f0d0,#cde4ff,#e6d4ff);font-size:clamp(17px,4.4vw,22px);font-weight:800;
+    box-shadow:0 3px 0 rgba(74,47,27,.35);animation:bday 1.6s ease-in-out infinite}
+  .bday[hidden]{display:none}
+  @keyframes bday{0%,100%{transform:rotate(-2deg) scale(1)}50%{transform:rotate(2deg) scale(1.05)}}
+  @media (prefers-reduced-motion:reduce){.bday{animation:none}}
   .opt{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:14px;margin:4px 0 6px;cursor:pointer;line-height:1.35}
   .opt input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--tan-d)}
   .play{font:inherit;font-size:24px;font-weight:900;padding:12px 38px;border-radius:18px;border:4px solid var(--ink);background:linear-gradient(#ffc48a,#f4945a);color:var(--ink);cursor:pointer;box-shadow:0 6px 0 var(--ink);margin-top:8px}
@@ -54,8 +60,19 @@
     .card{padding:14px 22px}
     h1{font-size:clamp(32px,6vh,46px)}
     .card p{margin:4px 0}
-    .rules{font-size:13.5px;padding:8px 12px;margin:8px 0;line-height:1.35}
+    .rules{font-size:13px;padding:6px 12px;margin:6px 0;line-height:1.3}
+    .foods{margin:4px 0}
+    .opt{font-size:13px;margin:2px 0 4px}
     .play{padding:8px 34px;font-size:22px}
+  }
+  /* show only the control line that fits the device */
+  @media (pointer:coarse){.only-desk{display:none}}
+  @media (pointer:fine){.only-touch{display:none}}
+  @media (max-width:520px) and (max-height:900px){
+    .card{padding:12px 14px}
+    h1{font-size:34px}
+    .card>p{font-size:14px}
+    .rules{font-size:12.5px}
   }
   @media (max-width:520px){
     .hud-left{top:8px;left:8px;min-width:0;width:calc(100% - 236px);padding:6px 10px;border-radius:12px}
@@ -90,13 +107,14 @@
 
 <div class="overlay on" id="menu">
   <div class="card">
-    <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(200px,50%);max-height:16vh;object-fit:contain;display:block;margin:-6px auto 0">
+    <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(200px,50%);max-height:13vh;object-fit:contain;display:block;margin:-6px auto 0">
+    <div class="bday" id="bday" hidden>🎉 Happy birthday, <b>Lenka</b>! 🎂</div>
     <h1>Corgi Chomp</h1>
     <p>Hrozna the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
     <div class="foods" id="menuFoods" title="From smallest to biggest"></div>
     <div class="rules">
-      🐾 Move with the <b>mouse / finger</b>, or <b>WASD / arrow keys</b><br>
-      📱 On a phone: <b>tilt</b> it, use the <b>joystick</b> 🕹️, or your <b>finger</b> 👆. Tap the control button at the top to change<br>
+      <span class="only-desk">🐾 Move with the <b>mouse</b>, or <b>WASD / arrow keys</b><br></span>
+      <span class="only-touch">📱 <b>Tilt</b> the phone, use the <b>joystick</b> 🕹️, or your <b>finger</b> 👆. Tap the control button at the top to change<br></span>
       🟢 Snacks <b class="g">smaller</b> than Hrozna: eat them and grow!<br>
       🔴 Snacks <b class="r">bigger</b> than Hrozna: do not touch them, or you lose a heart<br>
       📏 Every kind of snack has <b>its own size</b>: the grass is the smallest, the birthday cake the biggest (unless you pick mixed sizes)<br>
@@ -168,12 +186,14 @@ const FOODS = [ // keep this list from small to big
   { id: 'butter',   name: 'Butter',   move: 'drift',  col: ['#f7e04b', '#fff3a0', '#a79be0'], spd: 1 },
   { id: 'waffle',   name: 'Waffle',   move: 'spin',   col: ['#f5d742', '#f2b84b', '#fff3a0'], spd: 0.9 },
   { id: 'mouse',    name: 'Mouse',    move: 'scurry', col: ['#e0e0e0', '#9e9e9e', '#f3a6a6'], spd: 1.35, flip: true },
+  { id: 'fish',     name: 'Fish',     move: 'swim',   col: ['#cfe3cf', '#9e9e9e', '#c2185b'], spd: 1.2, flip: true },
   { id: 'carrot',   name: 'Carrot',   move: 'spin',   col: ['#f28c28', '#e8603c', '#8bc34a'], spd: 1.05 },
   { id: 'ball',     name: 'Ball',     move: 'spin',   col: ['#e8616a', '#f29a9a', '#222222'], spd: 1.1 },
   { id: 'cake',     name: 'Birthday cake', move: 'drift', col: ['#d9a35f', '#7b4fa8', '#e0474c', '#f2c94c'], spd: 0.85 },
 ];
-// fixed sizes: each kind is 1.6x bigger than the one before it
-FOODS.forEach((f, i) => { f.size = 0.35 * Math.pow(1.6, i); });
+// fixed sizes: from 0.35 (grass) to 24 (birthday cake), each kind the same
+// step bigger than the one before it (about 1.53x with 11 kinds)
+FOODS.forEach((f, i) => { f.size = 0.35 * Math.pow(24 / 0.35, i / (FOODS.length - 1)); });
 // People judge "how big" from a mix of area and length, so the game uses a
 // perceived size:  size = sqrt( sqrt(visible area) * longest side )
 // for the snacks and for Hrozna alike.
@@ -498,6 +518,14 @@ $('muteBtn').onclick = toggleMute;
 $('ctrlBtn').onclick = cycleCtrl;
 updateCtrlBtn();
 $('bestMenu').textContent = best ? `Best score: ${best}` : '';
+// Lenka's birthday is on 22 November: show a message in the week around it
+// (add ?birthday to the address to see it on any day)
+const isBirthday = (() => {
+  if (/[?&]birthday\b/.test(location.search)) return true;
+  const now = new Date(), day = new Date(now.getFullYear(), 10, 22);
+  return Math.abs(now - day) <= 7.5 * 864e5;
+})();
+$('bday').hidden = !isBirthday;
 
 function startGame() {
   mixedSizes = document.getElementById('mixedOpt').checked;
@@ -509,6 +537,7 @@ function startGame() {
   $('hud').classList.add('on');
   sfx.bark();
   barkT = nextBarkDelay() + 3;
+  if (isBirthday) banner('🎂 Happy birthday, Lenka! 🎂', 'Hrozna is ready for cake', true);
 }
 // back to the start screen (for example to change the Mixed sizes option)
 function toMenu() {
