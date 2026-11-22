@@ -18,7 +18,7 @@ A browser game: help Hrozna the Cardigan corgi eat snacks smaller than she is (h
 - Hrozna grows through 20 ranks. The camera zooms out two times as she grows
 - **Top Dog:** when she is bigger than the birthday cake, nothing can hurt her any more, and she grows faster
 - **Screen Filler:** she grows until she fills the whole screen. Then every snack gives double points. The game has no end: keep eating for a high score
-- **P / Esc:** pause · **M:** mute
+- **P / Esc:** pause · **M:** mute · **R:** restart (when paused or after a game). The pause screen also has Restart and Start screen buttons
 
 ## Art
 

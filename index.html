@@ -46,6 +46,8 @@
   .opt input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--tan-d)}
   .play{font:inherit;font-size:24px;font-weight:900;padding:12px 38px;border-radius:18px;border:4px solid var(--ink);background:linear-gradient(#ffc48a,#f4945a);color:var(--ink);cursor:pointer;box-shadow:0 6px 0 var(--ink);margin-top:8px}
   .play:hover{filter:brightness(1.05)}
+  .btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px}
+  .play.alt{font-size:17px;padding:8px 18px;border-width:3px;background:var(--cream);box-shadow:0 4px 0 var(--ink)}
   .play:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
   .small{font-size:13px;opacity:.8}
   @media (max-height:820px){
@@ -112,6 +114,10 @@
     <h2>Paused</h2>
     <p>Hrozna is waiting patiently. (Not really.)</p>
     <button class="play" id="resumeBtn">Resume</button>
+    <div class="btns">
+      <button class="play alt" id="restartBtn" title="Restart (R)">↻ Restart</button>
+      <button class="play alt" id="pauseMenuBtn">Start screen</button>
+    </div>
   </div>
 </div>
 
@@ -122,6 +128,7 @@
     <p style="font-size:28px;font-weight:900" id="overScore"></p>
     <p class="small" id="overBest"></p>
     <button class="play" id="againBtn">Play again</button>
+    <div class="btns"><button class="play alt" id="overMenuBtn">Start screen</button></div>
   </div>
 </div>
 
@@ -292,6 +299,7 @@ addEventListener('keydown', e => {
   keys[k] = true;
   if (k === 'p' || k === 'escape') togglePause();
   if (k === 'm') toggleMute();
+  if (k === 'r' && (state === 'paused' || state === 'over')) startGame();
   if ((k === 'enter' || k === ' ') && (state === 'menu' || state === 'over')) startGame();
   if (['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) pointer.active = false;
 });
@@ -482,6 +490,9 @@ const $ = id => document.getElementById(id);
 $('playBtn').onclick = startGame;
 $('againBtn').onclick = startGame;
 $('resumeBtn').onclick = togglePause;
+$('restartBtn').onclick = startGame;
+$('pauseMenuBtn').onclick = toMenu;
+$('overMenuBtn').onclick = toMenu;
 $('pauseBtn').onclick = togglePause;
 $('muteBtn').onclick = toggleMute;
 $('ctrlBtn').onclick = cycleCtrl;
@@ -498,6 +509,13 @@ function startGame() {
   $('hud').classList.add('on');
   sfx.bark();
   barkT = nextBarkDelay() + 3;
+}
+// back to the start screen (for example to change the Mixed sizes option)
+function toMenu() {
+  reset();
+  state = 'menu';
+  $('pauseOv').classList.remove('on'); $('overOv').classList.remove('on');
+  $('hud').classList.remove('on'); $('menu').classList.add('on');
 }
 function togglePause() {
   if (state === 'play') { state = 'paused'; $('pauseOv').classList.add('on'); }
