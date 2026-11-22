@@ -260,7 +260,7 @@ function corgiK() { return Math.max(CORGI_W / W, CORGI_H / H); }
 function computeZoom() { return START_FRAC / (START_S * corgiK()) * Math.pow(ZOOM_STEP, zstage); }
 
 // ---------- Spawning ----------
-function spawnItem(forceSmall, anywhere) {
+function spawnItem(forceSmall, anywhere, ring) {
   const z = Math.min(zoom, targetZoom);
   const halfW = W / 2 / z, halfH = H / 2 / z;
   // Which kinds can come: big enough to see, small enough to fit on the
@@ -298,6 +298,13 @@ function spawnItem(forceSmall, anywhere) {
   if (anywhere) {
     x = rand(-1, 1) * halfW * 0.9;
     if (Math.abs(x) < halfW * 0.25 && Math.abs(y) < halfH * 0.3) y += (y < 0 ? -1 : 1) * halfH * 0.4;
+  }
+  if (ring) {
+    // zoom-out: place it in the part of the new view that was outside the old view
+    for (let k = 0; k < 40; k++) {
+      x = rand(-1, 1) * halfW * 0.95; y = rand(-1, 1) * halfH * 0.9;
+      if (Math.abs(x) > ring.hw || Math.abs(y) > ring.hh) break;
+    }
   }
   const spdScreen = rand(60, 165) * (f > 1 ? 0.7 : 1) * type.spd * screenScale;
   items.push({
@@ -609,7 +616,13 @@ function eat(it) {
     }
   }
   while (zstage < ZOOM_OUTS && p.s >= ZOOM_S[zstage]) {
+    // Before the camera zooms out, fill the area that comes into view with
+    // snacks, so the new view is not empty around the old one.
+    const oldHW = W / 2 / Math.min(zoom, targetZoom), oldHH = H / 2 / Math.min(zoom, targetZoom);
     zstage++;
+    targetZoom = computeZoom();
+    const n = Math.round(Math.min(24, 14 + level) * (1 - ZOOM_STEP * ZOOM_STEP));
+    for (let i = 0; i < n; i++) spawnItem(false, true, { hw: oldHW, hh: oldHH });
     banner('🔭 Zoom out! 🔭', zstage < ZOOM_OUTS ? 'Hrozna is getting HUGE' : 'Last zoom!');
   }
   if (!topDog && p.s * EAT_RATIO > TOP_S) {
@@ -653,6 +666,9 @@ function update(dt) {
   // camera
   targetZoom = computeZoom();
   zoom += (targetZoom - zoom) * Math.min(1, dt * 2);
+  // the area snacks may use: the wider of the current and the target view,
+  // so snacks placed for a zoom-out are not removed while the camera moves
+  const viewW = W / 2 / Math.min(zoom, targetZoom), viewH = H / 2 / Math.min(zoom, targetZoom);
   shake = Math.max(0, shake - dt);
 
   // player movement
@@ -725,14 +741,14 @@ function update(dt) {
       case 'scurry':
         it.scurryT -= dt;
         if (it.scurryT <= 0) { it.scurryT = rand(0.3, 1.1); it.burst = rand(0.3, 1.8); it.vy = rand(-1, 1) * Math.abs(it.vx) * 0.7; }
-        it.x += it.vx * it.burst * dt; it.baseY = clamp(it.baseY + it.vy * dt, -halfH * 0.9, halfH * 0.9);
+        it.x += it.vx * it.burst * dt; it.baseY = clamp(it.baseY + it.vy * dt, -viewH * 0.9, viewH * 0.9);
         it.y = it.baseY + Math.abs(Math.sin(it.t * 14)) * -it.r * 0.12;
         it.rot = it.vy / (Math.abs(it.vx) + 1) * 0.4 * dir; break;
       case 'spin':
         it.x += it.vx * dt; it.y = it.baseY + Math.sin(it.t * 1.1 + it.ph) * it.r * 0.4;
         it.rot += dt * 1.4 * dir; break;
     }
-    if (Math.abs(it.x) > halfW + it.r * it.type.k * it.type.reach + 60 / zoom && Math.sign(it.x) === dir) { items.splice(i, 1); continue; }
+    if (Math.abs(it.x) > viewW + it.r * it.type.k * it.type.reach + 60 / zoom && Math.sign(it.x) === dir) { items.splice(i, 1); continue; }
 
     if (state !== 'play' || p.dead) continue;
     // collision: the snack's real outline against Hrozna's shape
