@@ -32,20 +32,29 @@
   .btn-s{width:44px;height:44px;border-radius:14px;border:3px solid var(--ink);background:var(--panel);font-size:20px;cursor:pointer;box-shadow:0 4px 0 rgba(74,47,27,.35)}
   .btn-s.off{opacity:.45}
   .btn-s:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(74,47,27,.35)}
-  .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(255,240,225,.35);backdrop-filter:blur(2px)}
+  .overlay{position:fixed;inset:0;display:none;align-items:flex-start;justify-content:center;padding:16px;overflow-y:auto;background:rgba(255,240,225,.35);backdrop-filter:blur(2px)}
   .overlay.on{display:flex}
-  .card{background:var(--panel);border:4px solid var(--ink);border-radius:26px;padding:24px 28px;max-width:520px;width:100%;text-align:center;box-shadow:0 8px 0 rgba(74,47,27,.35)}
+  .card{margin:auto;background:var(--panel);border:4px solid var(--ink);border-radius:26px;padding:24px 28px;max-width:520px;width:100%;text-align:center;box-shadow:0 8px 0 rgba(74,47,27,.35)}
   h1{margin:0 0 4px;font-size:clamp(36px,8vw,58px);letter-spacing:1px;color:var(--tan-d);text-shadow:3px 3px 0 var(--ink)}
   h2{margin:0 0 8px;font-size:34px;color:var(--tan-d);text-shadow:2px 2px 0 var(--ink)}
   p{margin:8px 0;line-height:1.45}
-  .foods{display:flex;justify-content:center;align-items:flex-end;gap:6px;margin:10px 0}
-  .foods img{width:clamp(36px,10vw,56px);height:auto}
+  .foods{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:4px 6px;margin:8px 0}
+  .foods img{width:clamp(30px,8.5vw,44px);height:auto}
   .rules{text-align:left;font-size:15px;background:#fff3e3;border:2px dashed var(--tan);border-radius:14px;padding:10px 14px;margin:12px 0}
   .rules b.g{color:var(--good)} .rules b.r{color:var(--bad)}
+  .opt{display:flex;gap:8px;align-items:flex-start;text-align:left;font-size:14px;margin:4px 0 6px;cursor:pointer;line-height:1.35}
+  .opt input{width:20px;height:20px;margin:0;flex:none;accent-color:var(--tan-d)}
   .play{font:inherit;font-size:24px;font-weight:900;padding:12px 38px;border-radius:18px;border:4px solid var(--ink);background:linear-gradient(#ffc48a,#f4945a);color:var(--ink);cursor:pointer;box-shadow:0 6px 0 var(--ink);margin-top:8px}
   .play:hover{filter:brightness(1.05)}
   .play:active{transform:translateY(4px);box-shadow:0 2px 0 var(--ink)}
   .small{font-size:13px;opacity:.8}
+  @media (max-height:820px){
+    .card{padding:14px 22px}
+    h1{font-size:clamp(32px,6vh,46px)}
+    .card p{margin:4px 0}
+    .rules{font-size:13.5px;padding:8px 12px;margin:8px 0;line-height:1.35}
+    .play{padding:8px 34px;font-size:22px}
+  }
   @media (max-width:520px){
     .hud-left{top:8px;left:8px;min-width:0;width:calc(100% - 236px);padding:6px 10px;border-radius:12px}
     .score{font-size:20px} .lvl{font-size:11px}
@@ -79,7 +88,7 @@
 
 <div class="overlay on" id="menu">
   <div class="card">
-    <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(240px,60%);display:block;margin:-6px auto 0">
+    <img src="sprites/hrozna_walk_1.webp" alt="Hrozna" style="width:min(200px,50%);max-height:16vh;object-fit:contain;display:block;margin:-6px auto 0">
     <h1>Corgi Chomp</h1>
     <p>Hrozna the Cardigan corgi is <b>hungry</b>. Very hungry.</p>
     <div class="foods" id="menuFoods" title="From smallest to biggest"></div>
@@ -88,10 +97,11 @@
       📱 On a phone: <b>tilt</b> it, use the <b>joystick</b> 🕹️, or your <b>finger</b> 👆. Tap the control button at the top to change<br>
       🟢 Snacks <b class="g">smaller</b> than Hrozna: eat them and grow!<br>
       🔴 Snacks <b class="r">bigger</b> than Hrozna: do not touch them, or you lose a heart<br>
-      📏 Every kind of snack has <b>its own size</b>: the grass is the smallest, the birthday cake the biggest<br>
+      📏 Every kind of snack has <b>its own size</b>: the grass is the smallest, the birthday cake the biggest (unless you pick mixed sizes)<br>
       🔭 As she grows, the camera zooms out <b>two times</b><br>
       👑 Outgrow <b>everything</b> and nothing can hurt her. Then grow until she <b>fills the screen</b>
     </div>
+    <label class="opt"><input type="checkbox" id="mixedOpt"><span>🎲 <b>Mixed sizes</b>: every kind of snack can be big or small (a big mouse, a small mouse...)</span></label>
     <button class="play" id="playBtn">Play!</button>
     <p class="small" id="bestMenu"></p>
   </div>
@@ -143,13 +153,20 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 //
 // Every kind of snack has one fixed size. "size" is its perceived size in
 // units of Hrozna's size at the start of a game (1 = as big as she starts).
-const FOODS = [
-  { id: 'grass',    name: 'Grass',    size: 0.35, move: 'drift',  col: ['#8bc34a', '#4caf50', '#2e7d6b'], spd: 0.9 },
-  { id: 'sausages', name: 'Sausages', size: 0.55, move: 'spin',   col: ['#e0405a', '#ff6b6b', '#9e9e9e'], spd: 1 },
-  { id: 'mouse',    name: 'Mouse',    size: 1.7,  move: 'scurry', col: ['#e0e0e0', '#9e9e9e', '#f3a6a6'], spd: 1.35, flip: true },
-  { id: 'carrot',   name: 'Carrot',   size: 4.5,  move: 'spin',   col: ['#f28c28', '#e8603c', '#8bc34a'], spd: 1.05 },
-  { id: 'cake',     name: 'Birthday cake', size: 12, move: 'drift', col: ['#d9a35f', '#7b4fa8', '#e0474c', '#f2c94c'], spd: 0.85 },
+const FOODS = [ // keep this list from small to big
+  { id: 'grass',    name: 'Grass',    move: 'drift',  col: ['#8bc34a', '#4caf50', '#2e7d6b'], spd: 0.9 },
+  { id: 'sausages', name: 'Sausages', move: 'spin',   col: ['#e0405a', '#ff6b6b', '#9e9e9e'], spd: 1 },
+  { id: 'apple',    name: 'Apple',    move: 'spin',   col: ['#f2d64b', '#d9433a', '#7a4a2a'], spd: 1 },
+  { id: 'yogurt',   name: 'Yogurt',   move: 'drift',  col: ['#ffffff', '#2f8fdc', '#9e9e9e'], spd: 1 },
+  { id: 'butter',   name: 'Butter',   move: 'drift',  col: ['#f7e04b', '#fff3a0', '#a79be0'], spd: 1 },
+  { id: 'waffle',   name: 'Waffle',   move: 'spin',   col: ['#f5d742', '#f2b84b', '#fff3a0'], spd: 0.9 },
+  { id: 'mouse',    name: 'Mouse',    move: 'scurry', col: ['#e0e0e0', '#9e9e9e', '#f3a6a6'], spd: 1.35, flip: true },
+  { id: 'carrot',   name: 'Carrot',   move: 'spin',   col: ['#f28c28', '#e8603c', '#8bc34a'], spd: 1.05 },
+  { id: 'ball',     name: 'Ball',     move: 'spin',   col: ['#e8616a', '#f29a9a', '#222222'], spd: 1.1 },
+  { id: 'cake',     name: 'Birthday cake', move: 'drift', col: ['#d9a35f', '#7b4fa8', '#e0474c', '#f2c94c'], spd: 0.85 },
 ];
+// fixed sizes: each kind is 1.6x bigger than the one before it
+FOODS.forEach((f, i) => { f.size = 0.35 * Math.pow(1.6, i); });
 // People judge "how big" from a mix of area and length, so the game uses a
 // perceived size:  size = sqrt( sqrt(visible area) * longest side )
 // for the snacks and for Hrozna alike.
@@ -205,6 +222,7 @@ const isEdible = it => it.r < CORGI_R * player.s * EAT_RATIO;
 let state = 'menu';
 let player, items, particles, popups, score, lives, level, zstage, topDog, maxed, zoom, targetZoom, spawnT, shake, dyingT, time = 0;
 let bannerQ = [], bannerUntil = 0;
+let mixedSizes = false; // start-screen option, off by default
 let best = 0;
 try { best = +localStorage.getItem('corgiChompBest') || 0; } catch (e) {}
 
@@ -238,11 +256,24 @@ function spawnItem(forceSmall, anywhere) {
   const big = topDog ? [] : ok.filter(t => t.size >= me * DANGER_MIN);
   const pick = (list, w) => { let sum = 0; for (const t of list) sum += w(t); let x = Math.random() * sum; for (const t of list) { x -= w(t); if (x <= 0) return t; } return list[list.length - 1]; };
   const dangerChance = Math.min(0.45, 0.27 + level / (LEVELS.length - 1) * 0.18);
-  let type;
-  if (big.length && !forceSmall && Math.random() < dangerChance) type = pick(big, t => 1 / (t.size * t.size)); // nearer sizes more often
-  else if (small.length) type = pick(small, t => t.size); // bigger edible kinds more often
-  else type = (ok.length ? ok : FOODS).reduce((a, b) => (b.size < a.size ? b : a));
-  const r = type.size * unit, f = type.size / me;
+  let type, f;
+  if (mixedSizes) {
+    // Mixed sizes: any kind, at any size. Same rules as fixed sizes: edible
+    // ones are at most 0.72x her size, dangerous ones at least 1.2x, and
+    // after Top Dog nothing is dangerous any more.
+    type = FOODS[(Math.random() * FOODS.length) | 0];
+    const fFit = Math.min(0.8 * Math.max(W, H) / (unit * type.k * type.ext * z), 0.7 * Math.min(W, H) / (unit * z)) / me;
+    const fMax = Math.min(2.6, fFit);
+    if (!topDog && !forceSmall && fMax >= DANGER_MIN + 0.1 && Math.random() < dangerChance)
+      f = DANGER_MIN + Math.pow(Math.random(), 1.5) * (fMax - DANGER_MIN);
+    else f = rand(0.3, Math.min(EDIBLE_MAX, fFit));
+  } else {
+    if (big.length && !forceSmall && Math.random() < dangerChance) type = pick(big, t => 1 / (t.size * t.size)); // nearer sizes more often
+    else if (small.length) type = pick(small, t => t.size); // bigger edible kinds more often
+    else type = (ok.length ? ok : FOODS).reduce((a, b) => (b.size < a.size ? b : a));
+    f = type.size / me;
+  }
+  const r = f * me * unit;
   const side = Math.random() < 0.5 ? -1 : 1;
   let x = side * (halfW + r * type.k * type.reach);
   let y = rand(-1, 1) * halfH * 0.85;
@@ -464,6 +495,7 @@ updateCtrlBtn();
 $('bestMenu').textContent = best ? `Best score: ${best}` : '';
 
 function startGame() {
+  mixedSizes = document.getElementById('mixedOpt').checked;
   enableTilt();
   initAudio();
   reset();
@@ -512,7 +544,7 @@ function eat(it) {
   const p = player;
   const rel = it.r / CORGI_R; // snack size in Hrozna's size units
   // points: bigger kinds give more, and every rank adds 10 %; double at full size
-  const gain = Math.max(1, Math.round(10 * it.type.size * (1 + level * 0.1) * (maxed ? 2 : 1)));
+  const gain = Math.max(1, Math.round(10 * (it.r / (CORGI_R * START_S)) * (1 + level * 0.1) * (maxed ? 2 : 1)));
   // After Top Dog, snacks count for more, so she can still grow fast while
   // every snack is now small next to her.
   const boost = topDog ? Math.pow(p.s / TOP_S, TOP_BOOST) : 1;
